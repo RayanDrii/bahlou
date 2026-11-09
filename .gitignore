@@ -1,0 +1,18 @@
+# dépendances et paquets construits
+node_modules/
+desktop/dist/
+
+# données et réglages du serveur (comptes, messages, notes, clés)
+data/
+*.env
+.env*
+
+# exports de conversations : ils peuvent contenir le code d'invitation
+/*.txt
+
+*.log
+.DS_Store
+packaging/aur/src/
+packaging/aur/pkg/
+packaging/aur/bahlou/
+*.pkg.tar.*
