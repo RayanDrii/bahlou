@@ -1,0 +1,7 @@
+{
+  "name": "bahlou-server",
+  "private": true,
+  "version": "2.1.0",
+  "description": "Serveur Bahlou",
+  "main": "server.js"
+}
