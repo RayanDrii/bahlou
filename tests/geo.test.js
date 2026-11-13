@@ -148,3 +148,13 @@ test('idle rooms expire and repeated creation is bounded', async () => {
   for (let i = 0; i < 5; i++) { assert.equal((await s.call('create')).status, 200); await s.call('leave'); }
   assert.equal((await s.call('create')).status, 429);
 });
+
+test('real Street View panorama ids may contain dots and are accepted', async () => {
+  const s = setup();
+  const code = (await s.call('create')).data.room.code;
+  await s.call('join', 'bob', { code });
+  const cfg = (await s.call('config', 'alice', {}, 'GET')).data;
+  const locations = cfg.candidates.slice(0, 5).map((c, index) => ({ index, panoId: index === 2 ? 'CAoSLEFGMVFpcE.4vX_9-q' : `pano-${index}`, lat: c.lat, lng: c.lng }));
+  assert.equal((await s.call('prepare', 'alice', { locations })).status, 200);
+  assert.equal((await s.call('prepare', 'alice', { locations: locations.map((l, i) => (i === 1 ? { ...l, panoId: 'bad id<script>' } : l)) })).status, 400);
+});

@@ -128,7 +128,7 @@ module.exports = function createGeo({ routes, send, readBody, broadcast, apiKey 
     if (!Array.isArray(b.locations) || b.locations.length < ROUND_COUNT || b.locations.length > CANDIDATES.length) fail(400, 'Il faut au moins 5 panoramas disponibles. Réessaie.');
     const ids = new Set(), indices = new Set();
     const locations = b.locations.map(p => {
-      if (!p || !Number.isInteger(p.index) || !CANDIDATES[p.index] || !validPoint(p) || typeof p.panoId !== 'string' || !/^[\w-]{1,256}$/.test(p.panoId) || ids.has(p.panoId) || indices.has(p.index) || distanceKm(p, CANDIDATES[p.index]) > 2) fail(400, 'Panorama invalide. Relance la préparation.');
+      if (!p || !Number.isInteger(p.index) || !CANDIDATES[p.index] || !validPoint(p) || typeof p.panoId !== 'string' || !/^[\w.-]{1,256}$/.test(p.panoId) || ids.has(p.panoId) || indices.has(p.index) || distanceKm(p, CANDIDATES[p.index]) > 2) fail(400, 'Panorama invalide. Relance la préparation.');
       ids.add(p.panoId); indices.add(p.index);
       return { panoId: p.panoId, lat: p.lat, lng: p.lng };
     });
