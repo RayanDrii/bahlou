@@ -100,6 +100,71 @@ Références officielles : [clé et restrictions](https://developers.google.com/
 Une erreur de clé, de facturation, de réseau ou d'imagerie est affichée dans Geo ;
 aucune vue simulée ne remplace Street View.
 
+### Mise en service sur le serveur Azure existant
+
+Ces étapes sont destinées à la personne qui possède déjà la clé SSH
+`~/.ssh/bahlou_azure` du compte `rayan` et les accès Azure utilisés par
+`deploy-azure.sh`. Les faire sur son ordinateur d’administration, pas dans
+la console Google Cloud. Elles redémarrent le site et effacent les salons Geo
+qui seraient en cours, sans effacer les comptes et messages.
+
+1. Depuis une copie à jour du dépôt, choisir la branche Geo :
+
+   ```bash
+   git fetch origin
+   git switch feature/bahlou-geo
+   git pull --ff-only origin feature/bahlou-geo
+   ```
+
+2. Copier le code et redémarrer le service via le script du dépôt :
+
+   ```bash
+   ./deploy-azure.sh
+   ```
+
+   Il installe le serveur dans `/srv/bahlou/server/`. Si la connexion SSH échoue
+   après un changement d’adresse IP, le script utilise la CLI Azure et les
+   autorisations Azure existantes pour mettre à jour la règle SSH.
+
+3. Se connecter à la VM et ouvrir la configuration du service :
+
+   ```bash
+   ssh -i ~/.ssh/bahlou_azure rayan@bahlou.spaincentral.cloudapp.azure.com
+   sudo systemctl edit bahlou
+   ```
+
+   Dans la zone modifiable du fichier, avant les commentaires qui indiquent
+   que les lignes suivantes seront ignorées, ajouter :
+
+   ```ini
+   [Service]
+   Environment="GOOGLE_MAPS_API_KEY=REMPLACER_PAR_LA_CLE_GOOGLE"
+   ```
+
+   S’il existe déjà une section `[Service]` dans cette zone, ajouter seulement
+   la ligne `Environment` dans cette section. Garder les autres réglages.
+   Remplacer le texte d’exemple par la clé créée dans Google Cloud.
+   Ne pas coller cette clé dans une commande `export` ou dans le dépôt.
+
+4. Enregistrer et quitter l’éditeur. Avec nano : Ctrl+O, Entrée, Ctrl+X.
+   Toujours dans la session SSH, appliquer :
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl restart bahlou
+   sudo systemctl is-active bahlou
+   ```
+
+   La dernière commande doit afficher `active`. En cas d’échec, consulter
+   `sudo journalctl -u bahlou -n 50 --no-pager` sur la VM ; ne pas partager
+   de sortie contenant des identifiants ou la clé.
+
+5. Dans le navigateur, ouvrir Bahlou, se connecter et choisir Geo. Créer
+   un salon, faire rejoindre un deuxième compte, puis cliquer sur
+   **Préparer et lancer**. Les rues doivent s’afficher. Une erreur Google
+   nécessite de vérifier Maps JavaScript API, les restrictions de domaine
+   de la clé et l’état du compte de facturation.
+
 ### Fonctionnement et limites
 
 - Les salons sont privés par code et les événements sont envoyés à leurs membres.

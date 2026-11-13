@@ -18,7 +18,7 @@ if ! ssh -i "$KEY" -o ConnectTimeout=8 -o BatchMode=yes "$TARGET" true 2>/dev/nu
 fi
 
 rsync -az --delete --rsync-path="sudo rsync" -e "ssh -i $KEY" \
-  server.js games.js games-cards.js work.js call.js admin.js work-calendar.json package.json package-lock.json public \
+  server.js games.js games-cards.js geo.js work.js call.js admin.js work-calendar.json package.json package-lock.json public \
   "$TARGET:/srv/bahlou/server/"
 ssh -i "$KEY" "$TARGET" 'sudo chown -R bahlou:bahlou /srv/bahlou/server && sudo systemctl restart bahlou && sudo systemctl is-active bahlou'
 curl -fsS -o /dev/null --retry 8 --retry-delay 1 --retry-all-errors --max-time 10 "https://$HOST/"
