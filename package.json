@@ -3,5 +3,8 @@
   "private": true,
   "version": "2.1.0",
   "description": "Serveur Bahlou",
-  "main": "server.js"
+  "main": "server.js",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
 }

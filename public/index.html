@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="/casino.css">
   <link rel="stylesheet" href="/words.css">
   <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="/geo.css">
 </head>
 <body>
   <!-- ===================================================== CONNEXION -->
@@ -78,6 +79,7 @@
         <a href="#/club" data-tab="club">Casino<span class="r-dot" id="rail-club-dot" hidden></span></a>
         <a href="#/cards" data-tab="cards">Caisses</a>
         <a href="#/words" data-tab="words">Mots</a>
+        <a href="#/geo" data-tab="geo">Geo</a>
         <a href="#/work" data-tab="work">Travail<span class="r-dot" id="rail-work-dot" hidden></span></a>
         <a href="#/admin" data-tab="admin" id="tab-admin" hidden>Admin</a>
       </div>
@@ -105,6 +107,8 @@
       </header>
       <div class="club-body" id="club-body"></div>
     </main>
+
+    <main class="geo" id="geo-view" hidden><div class="geo-body" id="geo-body"></div></main>
 
     <main class="admin" id="admin-view" hidden><div class="work-body" id="admin-body"></div></main>
 
@@ -190,6 +194,7 @@
   <script src="/anim.js"></script>
   <script src="/icons.js"></script>
   <script src="/casino-art.js"></script>
+  <script src="/geo.js"></script>
   <script src="/club.js"></script>
   <script src="/club-games.js"></script>
   <script src="/club-extra.js"></script>

@@ -60,7 +60,7 @@ install_server() {
   fi
 
   mkdir -p "$APP_DIR/server"
-  cp -r "$SRC_DIR/server.js" "$SRC_DIR/games.js" "$SRC_DIR/games-cards.js" "$SRC_DIR/work.js" "$SRC_DIR/call.js" "$SRC_DIR/admin.js" "$SRC_DIR/work-calendar.json" "$SRC_DIR/package.json" "$SRC_DIR/package-lock.json" "$SRC_DIR/public" "$APP_DIR/server/"
+  cp -r "$SRC_DIR/server.js" "$SRC_DIR/games.js" "$SRC_DIR/games-cards.js" "$SRC_DIR/geo.js" "$SRC_DIR/words.js" "$SRC_DIR/words-fr.js" "$SRC_DIR/work.js" "$SRC_DIR/call.js" "$SRC_DIR/admin.js" "$SRC_DIR/work-calendar.json" "$SRC_DIR/package.json" "$SRC_DIR/package-lock.json" "$SRC_DIR/public" "$APP_DIR/server/"
   (cd "$APP_DIR/server" && npm ci --omit=dev --silent)
   # paquets proposés sur la page /telecharger.html
   mkdir -p "$APP_DIR/downloads"

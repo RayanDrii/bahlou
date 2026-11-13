@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 const createGames = require('./games');
 const createWork = require('./work');
+const createGeo = require('./geo');
 const createCall = require('./call');
 const createAdmin = require('./admin');
 
@@ -405,6 +406,7 @@ const games = createGames({
   usersChanged: () => { save(); broadcast('users', publicUsers()); },
 });
 
+const geo = createGeo({ routes, send, readBody, broadcast });
 createWork({ routes, send, readBody, dataDir: DATA_DIR, games });
 require('./words')({ routes, send, readBody, db, save, games, postSystem });
 createCall({ routes, send, readBody, broadcast, postSystem });
@@ -621,5 +623,5 @@ process.on('SIGUSR2', () => {
 });
 
 for (const sig of ['SIGINT', 'SIGTERM']) {
-  process.on(sig, () => { games.shutdown(); saveNow(); process.exit(0); });
+  process.on(sig, () => { geo.close(); games.shutdown(); saveNow(); process.exit(0); });
 }

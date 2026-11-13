@@ -2,8 +2,8 @@
 /* Bahlou — animations de l'interface : changements de page, cartes qui suivent la souris, gains qui s'envolent. */
 const Anim = (() => {
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const WORD = { chat: 'Salon', club: 'Casino', cards: 'Caisses', words: 'Mots', work: 'Travail', admin: 'Admin' };
-  const BOX = { chat: '#chat-view', club: '#club', work: '#work', admin: '#admin-view', words: '#words-view' };
+  const WORD = { chat: 'Salon', club: 'Casino', cards: 'Caisses', words: 'Mots', geo: 'Geo', work: 'Travail', admin: 'Admin' };
+  const BOX = { chat: '#chat-view', club: '#club', work: '#work', admin: '#admin-view', words: '#words-view', geo: '#geo-view' };
   const root = document.documentElement;
   const lite = () => root.classList.contains('lite');
 
@@ -44,7 +44,7 @@ const Anim = (() => {
 
   function where() {
     const [page, sub] = (location.hash.replace(/^#\/?/, '') || 'chat').split('/');
-    const section = ['chat', 'work', 'admin', 'words'].includes(page) ? page : 'club';
+    const section = ['chat', 'work', 'admin', 'words', 'geo'].includes(page) ? page : 'club';
     return { section, tab: page === 'cards' ? 'cards' : section, game: page === 'club' && sub ? sub : '' };
   }
   function enter(section) {
