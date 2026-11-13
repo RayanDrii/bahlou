@@ -132,10 +132,15 @@ function rateLimited(ip) {
   return list.length > 10;
 }
 
-// une seule conversation : le chat de la promo
+// le Salon, ouvert à tous, et les messages privés entre deux membres (« d:alice|bob », pseudos triés)
 const MAIN = 'c:general';
-function canAccess(user, conv) { return conv === MAIN; }
-function participants() { return null; }
+function dmUsers(conv) {
+  const m = /^d:([a-z0-9._-]{2,32})\|([a-z0-9._-]{2,32})$/.exec(String(conv));
+  if (!m || m[1] >= m[2] || !Object.hasOwn(db.users, m[1]) || !Object.hasOwn(db.users, m[2])) return null;
+  return [m[1], m[2]];
+}
+function canAccess(user, conv) { return conv === MAIN || !!dmUsers(conv)?.includes(user); }
+function participants(conv) { return conv === MAIN ? null : dmUsers(conv); }
 
 // ---------------------------------------------------------------- temps réel (WebSocket : les tunnels gratuits ne laissent pas passer les flux SSE)
 const clients = new Set(); // { user, send, close }
@@ -245,7 +250,8 @@ const routes = {
     for (const [conv, list] of Object.entries(db.messages)) {
       if (list.length && canAccess(user, conv)) last[conv] = list[list.length - 1];
     }
-    send(res, 200, { me: user, users: publicUsers(), last, admin: admin.isAdmin(user) });
+    const alert = db.alert && Date.now() - db.alert.ts < 86400000 ? db.alert : null;
+    send(res, 200, { me: user, users: publicUsers(), last, admin: admin.isAdmin(user), alert });
   },
 
   'GET /api/messages': (req, res, user, url) => {
@@ -400,6 +406,7 @@ const games = createGames({
 });
 
 createWork({ routes, send, readBody, dataDir: DATA_DIR, games });
+require('./words')({ routes, send, readBody, db, save, games, postSystem });
 createCall({ routes, send, readBody, broadcast, postSystem });
 const admin = createAdmin({ routes, send, readBody, db, save, games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir: DATA_DIR });
 

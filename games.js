@@ -1329,6 +1329,7 @@ module.exports = function createGames({ db, routes, send, readBody, broadcast, s
     },
     overview() { return { jackpot: g.jackpot, players: Object.fromEntries(Object.keys(db.users).map((name) => { const p = player(name), level = levelOf(p.xp); return [name, { coins: p.coins, level, rank: rankOf(level) }]; })) }; },
     gift(name, amount) { const p = player(name); p.coins += amount; emit(name, { type: 'ach', name: 'Cadeau', d: 'Offert par le casino', reward: amount }); save(); pushMe(name); return p.coins; },
+    bonus(name, amount, title, txt) { const p = player(name); p.coins += Math.floor(amount); emit(name, { type: 'bonus', title, txt, reward: Math.floor(amount) }); save(); pushMe(name); },
     reward(name, amount, txt) { const p = player(name); p.coins += Math.floor(amount); emit(name, { type: 'work', txt, reward: Math.floor(amount) }); save(); pushMe(name); },
     shutdown() {
       for (const [name, b] of C.bets) { if (!b.cash && C.phase !== 'end') player(name).coins += b.bet; }

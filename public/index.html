@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="/fx.css">
   <link rel="stylesheet" href="/anim.css">
   <link rel="stylesheet" href="/casino.css">
+  <link rel="stylesheet" href="/words.css">
   <link rel="stylesheet" href="/admin.css">
 </head>
 <body>
@@ -76,6 +77,7 @@
         <a href="#/chat" data-tab="chat">Salon<span class="r-badge" id="rail-chat-badge" hidden></span></a>
         <a href="#/club" data-tab="club">Casino<span class="r-dot" id="rail-club-dot" hidden></span></a>
         <a href="#/cards" data-tab="cards">Caisses</a>
+        <a href="#/words" data-tab="words">Mots</a>
         <a href="#/work" data-tab="work">Travail<span class="r-dot" id="rail-work-dot" hidden></span></a>
         <a href="#/admin" data-tab="admin" id="tab-admin" hidden>Admin</a>
       </div>
@@ -108,6 +110,8 @@
 
     <main class="work" id="work" hidden><div class="work-body" id="work-body"></div></main>
 
+    <main class="words" id="words-view" hidden><div class="work-body" id="words-body"></div></main>
+
     <main class="chat" id="chat-view">
       <header class="chat-head">
         <div class="chat-id">
@@ -119,6 +123,7 @@
         <button type="button" class="call-btn" id="call-btn">Appeler</button>
         <button type="button" class="txt-btn" id="toggle-members">Membres</button>
       </header>
+      <nav class="conv-bar" id="conv-bar" aria-label="Conversations"></nav>
 
       <section class="call" id="call" hidden><div id="call-body"></div></section>
 
@@ -191,6 +196,7 @@
   <script src="/work.js"></script>
   <script src="/call.js"></script>
   <script src="/admin.js"></script>
+  <script src="/words.js"></script>
   <script>start();</script>
 </body>
 </html>

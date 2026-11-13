@@ -3,7 +3,8 @@
 /* ============================================================ état */
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
-const CONV = 'c:general'; // l'unique chat de la promo
+const MAIN_CONV = 'c:general'; // le Salon
+let CONV = MAIN_CONV;       // la conversation affichée : le Salon ou un message privé
 const state = {
   me: null,
   users: [],
@@ -17,6 +18,7 @@ const state = {
   sound: true,
   reply: null,
   image: null,
+  convs: {},   // messages privés : conv -> { other, unread, ts }
 };
 const QUICK = ['👍', '❤️', '😂', '😮', '🔥', '🎉'];
 const mobile = matchMedia('(max-width: 760px)');
@@ -214,6 +216,7 @@ async function start() {
   state.me = s.me;
   state.users = s.users;
   state.admin = !!s.admin;
+  initConvs(s.last);
   $('#tab-admin').hidden = !state.admin;
   $('#auth').hidden = true;
   $('#app').hidden = false;
@@ -225,6 +228,7 @@ async function start() {
   Call.init();
   Work.checkReminders();
   setInterval(Work.checkReminders, 30 * 60e3);
+  if (s.alert) showAlert(s.alert);
   if ('Notification' in window && Notification.permission === 'default') {
     document.addEventListener('click', () => Notification.requestPermission(), { once: true });
   }
@@ -297,6 +301,7 @@ function connect() {
   es.addEventListener('poll', (e) => { const d = JSON.parse(e.data); const m = state.messages.find((x) => x.id === d.id); if (m) { m.poll = d.poll; renderMessages('keep'); } });
   es.addEventListener('message', (e) => onMessage(JSON.parse(e.data)));
   es.addEventListener('typing', (e) => onTyping(JSON.parse(e.data)));
+  es.addEventListener('alert', (e) => showAlert(JSON.parse(e.data)));
   es.addEventListener('reaction', (e) => {
     const { id, reactions } = JSON.parse(e.data);
     const m = state.messages.find((x) => x.id === id);
@@ -319,8 +324,91 @@ async function resync() {
   } catch {}
 }
 
+/* ============================================================ messages privés */
+const dmId = (a, b) => 'd:' + [a, b].sort().join('|');
+function convOf(conv) {
+  if (conv === MAIN_CONV) return null;
+  if (!state.convs[conv]) {
+    const [a, b] = conv.slice(2).split('|');
+    if (a !== state.me && b !== state.me) return null;
+    state.convs[conv] = { other: a === state.me ? b : a, unread: 0, ts: 0 };
+  }
+  return state.convs[conv];
+}
+function initConvs(last = {}) {
+  for (const [conv, m] of Object.entries(last)) {
+    const c = convOf(conv);
+    if (!c) continue;
+    c.ts = m.ts;
+    if (m.from !== state.me && m.id > store.get('seen:' + conv, 0)) c.unread = 1;
+  }
+  renderConvs();
+}
+function bumpUnread(conv) {
+  if (conv === MAIN_CONV) state.unread++;
+  else { const c = convOf(conv); if (c) c.unread++; }
+  updateTitle();
+  renderConvs();
+}
+function renderConvs() {
+  const bar = $('#conv-bar');
+  if (!bar) return;
+  const list = Object.entries(state.convs).sort((a, b) => b[1].ts - a[1].ts);
+  const badge = (n, on) => (n && !on ? `<i>${n}</i>` : '');
+  bar.innerHTML = `<button type="button" class="cv ${CONV === MAIN_CONV ? 'on' : ''}" data-conv="${MAIN_CONV}"><b>Salon</b>${badge(state.unread, CONV === MAIN_CONV)}</button>`
+    + list.map(([id, c]) => `<button type="button" class="cv ${id === CONV ? 'on' : ''}" data-conv="${esc(id)}"><span class="cv-av"></span><b>${esc(c.other)}</b>${badge(c.unread, id === CONV)}</button>`).join('')
+    + '<button type="button" class="cv cv-new" id="cv-new">+ Message privé</button>';
+  bar.querySelectorAll('[data-conv]').forEach((b) => {
+    b.onclick = () => openConv(b.dataset.conv);
+    const av = b.querySelector('.cv-av');
+    if (av) av.replaceWith(avatar(state.convs[b.dataset.conv].other, 'xs'));
+  });
+  $('#cv-new').onclick = () => { setMembers(true); toast('Choisis un membre pour lui écrire en privé.'); };
+}
+function paintChatHead() {
+  const c = convOf(CONV), h = $('.chat-id h2');
+  if (!c) {
+    h.textContent = 'Le Salon';
+    const on = state.users.filter((u) => u.online);
+    $('#chat-sub').innerHTML = `${on.length} en ligne · ${state.users.length} membre${state.users.length > 1 ? 's' : ''}`;
+    $('#input').placeholder = 'Écrire au Salon';
+  } else {
+    h.textContent = c.other;
+    $('#chat-sub').textContent = `Message privé · ${userOf(c.other).online ? 'en ligne' : 'hors ligne'}`;
+    $('#input').placeholder = `Écrire à ${c.other}`;
+  }
+  $('#chat-view').classList.toggle('is-dm', !!c);
+}
+async function openConv(conv) {
+  if (conv !== MAIN_CONV && !convOf(conv)) return;
+  if (conv !== CONV) {
+    CONV = conv;
+    state.messages = []; state.more = false; state.show = 70; state.newBelow = 0;
+    state.reply = null; state.image = null; paintExtra();
+    Object.keys(state.typing).forEach(clearTyping);
+    paintChatHead(); renderConvs(); renderMessages('bottom');
+  }
+  if (!Club.inChat()) location.hash = '#/chat';
+  await loadMessages();
+}
+window.openConv = openConv;
+function onOtherConv(m) {
+  const mine = m.from === state.me;
+  if (m.conv === MAIN_CONV) {
+    if (!mine && !m.sys) { bumpUnread(MAIN_CONV); if (mentionsMe(m.text)) notify(m); }
+    return;
+  }
+  const c = convOf(m.conv);
+  if (!c) return;
+  c.ts = m.ts;
+  if (!mine) { bumpUnread(m.conv); notify(m); if (!document.hidden) Club.peek({ ...m, text: msgPreview(m) }); }
+  renderConvs();
+}
+
 function onMessage(m) {
-  if (m.conv !== CONV || state.messages.some((x) => x.id === m.id)) return;
+  if (m.conv !== CONV) return onOtherConv(m);
+  if (state.messages.some((x) => x.id === m.id)) return;
+  if (CONV !== MAIN_CONV) { convOf(CONV).ts = m.ts; renderConvs(); }
   state.messages.push(m);
   state.fresh.add(m.id);
   clearTyping(m.from);
@@ -332,7 +420,7 @@ function onMessage(m) {
   if (!near && !mine) { state.newBelow++; updateToBottom(); }
 
   if (mine || (!document.hidden && Club.inChat())) markSeen();
-  else { state.unread++; updateTitle(); }
+  else bumpUnread(CONV);
   if (!mine && !m.sys) {
     notify(m);
     if (!Club.inChat() && !document.hidden) Club.peek({ ...m, text: msgPreview(m) });
@@ -341,26 +429,36 @@ function onMessage(m) {
 
 const msgPreview = (m) => m.text || (m.image ? 'Image' : m.poll ? `Sondage : ${m.poll.q}` : '');
 function notify(m) {
-  const mention = mentionsMe(m.text);
+  const mention = mentionsMe(m.text), dm = !!m.conv && m.conv !== MAIN_CONV;
   const away = document.hidden || !document.hasFocus();
-  if (away || mention || !Club.inChat()) ding();
+  if (away || mention || (dm && m.conv !== CONV) || !Club.inChat()) ding();
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (!away && !mention) return;
-  const n = new Notification(mention ? `${m.from} t'a mentionné` : m.from, { body: msgPreview(m).slice(0, 160), icon: '/icon.png', tag: 'bahlou' });
+  const n = new Notification(dm ? `Message privé de ${m.from}` : mention ? `${m.from} t'a mentionné` : m.from, { body: msgPreview(m).slice(0, 160), icon: '/icon.png', tag: 'bahlou' });
   n.onclick = () => { window.focus(); n.close(); };
 }
-function updateTitle() { document.title = state.unread ? `(${state.unread}) Bahlou` : 'Bahlou'; Club.badge(state.unread); }
+function updateTitle() {
+  const total = state.unread + Object.values(state.convs).reduce((t, c) => t + c.unread, 0);
+  document.title = total ? `(${total}) Bahlou` : 'Bahlou';
+  Club.badge(total);
+}
 function markSeen() {
   const last = state.messages[state.messages.length - 1];
-  if (last && last.id > state.seen) { state.seen = last.id; store.set('seen1', state.seen); }
-  state.unread = 0;
+  if (CONV === MAIN_CONV) {
+    if (last && last.id > state.seen) { state.seen = last.id; store.set('seen1', state.seen); }
+    state.unread = 0;
+  } else {
+    const c = convOf(CONV);
+    if (c) { if (last) store.set('seen:' + CONV, last.id); c.unread = 0; }
+  }
   updateTitle();
+  renderConvs();
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && Club.inChat()) markSeen(); });
 
 /* ============================================================ « écrit… » */
-function onTyping({ user }) {
-  if (user === state.me) return;
+function onTyping({ user, conv }) {
+  if (user === state.me || (conv && conv !== CONV)) return;
   clearTimeout(state.typing[user]);
   state.typing[user] = setTimeout(() => clearTyping(user), 4000);
   renderTyping();
@@ -381,7 +479,7 @@ function renderTyping() {
 /* ============================================================ en-tête, membres, profil */
 function renderPeople() {
   const on = state.users.filter((u) => u.online);
-  $('#chat-sub').innerHTML = `${on.length} en ligne · ${state.users.length} membre${state.users.length > 1 ? 's' : ''}`;
+  paintChatHead();
   $('#rail-name').textContent = state.me;
   const pile = $('#facepile');
   pile.replaceChildren(...on.slice(0, 5).map((u) => { const a = avatar(u.name, 'sm'); a.title = u.name; return a; }));
@@ -402,11 +500,13 @@ function renderPeople() {
       b.appendChild(avatar(u.name, 'sm', true));
       b.insertAdjacentHTML('beforeend', `<div><strong>${esc(u.name)}${u.name === state.me ? ' <span class="muted">(toi)</span>' : ''}</strong>
         <small class="${u.online ? 'on' : ''}">${u.online ? 'En ligne' : 'Hors ligne'}</small></div>`);
-      b.title = u.name === state.me ? 'Mon profil' : `Mentionner ${u.name}`;
-      b.addEventListener('click', () => {
+      b.title = u.name === state.me ? 'Mon profil' : `Écrire en privé à ${u.name}`;
+      if (u.name !== state.me) b.insertAdjacentHTML('beforeend', `<span class="m-at" title="Mentionner ${esc(u.name)} au Salon">@</span>`);
+      b.addEventListener('click', async (e) => {
         if (u.name === state.me) return openProfile();
-        insertAtCursor(`@${u.name} `);
         if (innerWidth < 1000) setMembers(false);
+        if (e.target.closest('.m-at')) { await openConv(MAIN_CONV); insertAtCursor(`@${u.name} `); }
+        else openConv(dmId(state.me, u.name));
       });
       box.appendChild(b);
     }
@@ -802,3 +902,36 @@ document.addEventListener('keydown', (e) => {
   else if (innerWidth < 1000) setMembers(false);
 });
 
+
+/* ============================================================ annonce plein écran (admin) */
+let alertCtx = null;
+function fanfare() {
+  if (!state.sound) return;
+  try {
+    alertCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = alertCtx.currentTime;
+    [[523, 0], [659, .16], [784, .32], [1047, .5], [784, .74], [1047, .9]].forEach(([f, d]) => {
+      const o = alertCtx.createOscillator(), g = alertCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t0 + d); g.gain.linearRampToValueAtTime(.18, t0 + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + d + .34);
+      o.connect(g); g.connect(alertCtx.destination); o.start(t0 + d); o.stop(t0 + d + .36);
+    });
+  } catch {}
+}
+function showAlert(a) {
+  if (!a || a.id <= store.get('alertSeen', 0)) return;
+  document.querySelector('#alert-over')?.remove();
+  const el = document.createElement('div');
+  el.id = 'alert-over';
+  el.className = 'alert-over';
+  el.innerHTML = `<div class="alert-card"><small>Annonce</small><h2 class="${a.text.length > 90 ? 'long' : ''}">${esc(a.text)}</h2><p>de ${esc(a.by)}</p><button type="button">Compris</button></div>`;
+  const close = () => { store.set('alertSeen', a.id); el.classList.add('out'); setTimeout(() => el.remove(), 260); };
+  el.querySelector('button').onclick = close;
+  document.body.appendChild(el);
+  el.querySelector('button').focus();
+  fanfare();
+  if ((document.hidden || !document.hasFocus()) && window.Notification?.permission === 'granted') {
+    const n = new Notification('Annonce Bahlou', { body: a.text.slice(0, 180), icon: '/icon.png', tag: 'bahlou-alert', requireInteraction: true });
+    n.onclick = () => { window.focus(); n.close(); };
+  }
+}

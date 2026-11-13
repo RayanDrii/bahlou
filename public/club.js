@@ -149,6 +149,7 @@ const Club = (() => {
       else if (e.type === 'set') { sfx.big(); popCard(`Série complète : ${esc(e.name)}`, `+${fmt(e.reward)} bahlous`, 'gold'); }
       else if (e.type === 'tourney') { sfx.big(); popCard(`Tournoi : ${e.place}${e.place === 1 ? 'er' : 'e'}`, `${e.reward ? `+${fmt(e.reward)} bahlous, ` : ''}${e.pts} points`, 'gold'); }
       else if (e.type === 'tourney-week') { sfx.big(); popCard(`${e.place}${e.place === 1 ? 'er' : 'e'} des tournois de la semaine`, `+${fmt(e.reward)} bahlous`, 'gold'); }
+      else if (e.type === 'bonus') { sfx.coin(); popCard(esc(e.title), `${esc(e.txt)} · +${fmt(e.reward)}`, 'gold'); }
       else if (e.type === 'work') { sfx.coin(); popCard('Prime de travail', `${esc(e.txt)} · +${fmt(e.reward)}`, 'gold'); }
       else if (e.type === 'week') { sfx.big(); popCard(`${e.place}${e.place === 1 ? 'er' : 'e'} de la semaine`, `+${fmt(e.reward)} bahlous`, 'gold'); }
     }, i * 600));
@@ -158,8 +159,9 @@ const Club = (() => {
     el.type = 'button';
     el.className = 'msg-toast';
     el.appendChild(avatar(m.from, 'lg'));
-    el.insertAdjacentHTML('beforeend', `<div><small>Nouveau message</small><b>${esc(m.from)}</b><p>${esc(m.text.slice(0, 140))}</p></div>`);
-    el.onclick = () => { location.hash = '#/chat'; el.remove(); };
+    const dm = m.conv && m.conv !== 'c:general';
+    el.insertAdjacentHTML('beforeend', `<div><small>${dm ? 'Message privé' : 'Nouveau message'}</small><b>${esc(m.from)}</b><p>${esc(m.text.slice(0, 140))}</p></div>`);
+    el.onclick = () => { if (window.openConv) window.openConv(m.conv || 'c:general'); else location.hash = '#/chat'; el.remove(); };
     let box = $('#msg-toasts');
     if (!box) { box = Object.assign(document.createElement('div'), { id: 'msg-toasts' }); document.body.appendChild(box); }
     box.prepend(el);
@@ -421,20 +423,24 @@ const Club = (() => {
     const [page, sub] = h.split('/');
     const inWork = page === 'work';
     const inAdmin = page === 'admin';
-    const inClub = page !== 'chat' && !inWork && !inAdmin;
-    $('#chat-view').hidden = inClub || inWork || inAdmin;
+    const inWords = page === 'words';
+    const inClub = page !== 'chat' && !inWork && !inAdmin && !inWords;
+    $('#chat-view').hidden = inClub || inWork || inAdmin || inWords;
+    $('#words-view').hidden = !inWords;
     $('#club').hidden = !inClub;
     $('#work').hidden = !inWork;
     $('#admin-view').hidden = !inAdmin;
-    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin);
-    document.documentElement.dataset.page = inAdmin ? 'admin' : inWork ? 'work' : inClub ? 'club' : 'chat';
-    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inAdmin ? 'admin' : inWork ? 'work' : inClub ? (page === 'cards' ? 'cards' : 'club') : 'chat')));
+    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin || inWords);
+    document.documentElement.dataset.page = inAdmin ? 'admin' : inWork ? 'work' : inWords ? 'words' : inClub ? 'club' : 'chat';
+    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inAdmin ? 'admin' : inWork ? 'work' : inWords ? 'words' : inClub ? (page === 'cards' ? 'cards' : 'club') : 'chat')));
     Work.stop();
     Admin.stop();
+    Words.stop();
     document.querySelectorAll('.subnav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === page));
     current?.stop(); current = null;
     if (inWork) { Work.open(); return; }
     if (inAdmin) { Admin.open(); return; }
+    if (inWords) { Words.open(); return; }
     if (!inClub) { renderMessages('bottom'); markSeen(); return; }
     const body = $('#club-body'), ctx = makeCtx();
     current = ctx;

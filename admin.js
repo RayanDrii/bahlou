@@ -86,6 +86,16 @@ module.exports = function createAdmin({ routes, send, readBody, db, save, games,
     send(res, 200, { invite: db.invite });
   });
 
+  routes['POST /api/admin/alert'] = only(async (req, res, user) => {
+    const text = String((await readBody(req)).text || '').trim();
+    if (!text || text.length > 300) return send(res, 400, { error: 'Annonce vide ou trop longue (300 caractères).' });
+    db.alert = { id: Date.now(), text, by: user, ts: Date.now() };
+    save();
+    broadcast('alert', db.alert);
+    log(user, 'Annonce plein écran');
+    send(res, 200, { ok: true });
+  });
+
   routes['POST /api/admin/announce'] = only(async (req, res, user) => {
     const text = String((await readBody(req)).text || '').trim();
     if (!text || text.length > 500) return send(res, 400, { error: 'Annonce vide ou trop longue.' });

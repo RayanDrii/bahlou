@@ -72,6 +72,7 @@ const Admin = (() => {
       <section><h2>Distribuer</h2><form class="a-form" id="a-gift"><select name="to"><option value="@online">Tous les joueurs en ligne</option><option value="@all">Tous les comptes</option>${D.players.map((p) => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('')}</select><input type="number" name="amount" min="1" required placeholder="Montant"><button type="submit" class="w-btn gold">Envoyer</button></form></section>
       <section><h2>Joueurs</h2><input class="a-search" id="a-search" placeholder="Rechercher un joueur" value="${esc(query)}"><div id="a-list"></div></section>
       <section><h2>Annonce au Salon</h2><form class="a-form" id="a-say"><input name="text" maxlength="500" required placeholder="Message visible par tout le monde"><button type="submit" class="w-btn gold">Publier</button></form></section>
+      <section><h2>Annonce plein écran</h2><form class="a-form" id="a-alert"><input name="text" maxlength="300" required placeholder="S'affiche en grand sur l'écran de tout le monde"><button type="submit" class="w-btn gold">Afficher partout</button></form></section>
       <section><h2>Accès</h2><div class="a-line"><small>Code d'invitation</small><code>${esc(D.invite)}</code><button type="button" class="w-btn" id="a-copy-i">Copier</button><button type="button" class="w-btn" id="a-new-i">Changer</button></div>
         <div class="a-line"><small>Lien pour tes potes</small><code>${link ? esc(link) : 'Tunnel jamais lancé'}</code>${link ? '<button type="button" class="w-btn" id="a-copy-l">Copier</button>' : ''}</div></section>
       <section><h2>Journal</h2><ul class="w-list">${D.log.map((l) => `<li><span>${when(l.ts)}</span><b class="a-log">${esc(l.action)}</b></li>`).join('') || '<li><span>Aucune action pour le moment.</span></li>'}</ul></section>`;
@@ -79,6 +80,7 @@ const Admin = (() => {
     const r = root();
     r.querySelector('#a-search').oninput = (e) => { query = e.target.value; paintList(); };
     r.querySelector('#a-gift').onsubmit = (e) => { e.preventDefault(); const f = e.target; call('/api/admin/coins', { to: f.to.value, amount: Number(f.amount.value) }, 'Bahlous envoyés.'); };
+    r.querySelector('#a-alert').onsubmit = async (e) => { e.preventDefault(); const f = e.target; if (await call('/api/admin/alert', { text: f.text.value }, 'Annonce affichée sur tous les écrans.')) f.reset(); };
     r.querySelector('#a-say').onsubmit = (e) => { e.preventDefault(); call('/api/admin/announce', { text: e.target.text.value }, 'Annonce publiée.'); };
     r.querySelector('#a-copy-i').onclick = (e) => copy(D.invite, e.target);
     r.querySelector('#a-new-i').onclick = (e) => armed(e.target, 'Confirmer', () => call('/api/admin/invite', {}, 'Nouveau code créé.'));
