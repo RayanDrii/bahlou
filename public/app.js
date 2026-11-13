@@ -293,6 +293,7 @@ function connect() {
     if (look(state.users) !== before) renderMessages('keep'); // une photo ou un badge a changé
   });
   Club.bind(es);
+  Geo.bind(es);
   Call.bind(es);
   es.addEventListener('poll', (e) => { const d = JSON.parse(e.data); const m = state.messages.find((x) => x.id === d.id); if (m) { m.poll = d.poll; renderMessages('keep'); } });
   es.addEventListener('message', (e) => onMessage(JSON.parse(e.data)));
@@ -315,6 +316,7 @@ async function resync() {
     renderPeople();
     await loadMessages();
     await Club.refresh();
+    Geo.refresh();
     Call.refresh();
   } catch {}
 }

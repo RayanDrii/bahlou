@@ -419,20 +419,24 @@ const Club = (() => {
   function route() {
     const h = location.hash.replace(/^#\/?/, '') || 'chat';
     const [page, sub] = h.split('/');
+    const inGeo = page === 'geo';
     const inWork = page === 'work';
     const inAdmin = page === 'admin';
-    const inClub = page !== 'chat' && !inWork && !inAdmin;
-    $('#chat-view').hidden = inClub || inWork || inAdmin;
+    const inClub = page !== 'chat' && !inWork && !inAdmin && !inGeo;
+    $('#chat-view').hidden = inClub || inWork || inAdmin || inGeo;
+    $('#geo-view').hidden = !inGeo;
     $('#club').hidden = !inClub;
     $('#work').hidden = !inWork;
     $('#admin-view').hidden = !inAdmin;
-    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin);
-    document.documentElement.dataset.page = inAdmin ? 'admin' : inWork ? 'work' : inClub ? 'club' : 'chat';
-    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inAdmin ? 'admin' : inWork ? 'work' : inClub ? (page === 'cards' ? 'cards' : 'club') : 'chat')));
+    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin || inGeo);
+    document.documentElement.dataset.page = inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? 'club' : 'chat';
+    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? (page === 'cards' ? 'cards' : 'club') : 'chat')));
+    Geo.stop();
     Work.stop();
     Admin.stop();
     document.querySelectorAll('.subnav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === page));
     current?.stop(); current = null;
+    if (inGeo) { Geo.open(sub); return; }
     if (inWork) { Work.open(); return; }
     if (inAdmin) { Admin.open(); return; }
     if (!inClub) { renderMessages('bottom'); markSeen(); return; }
@@ -484,7 +488,7 @@ const Club = (() => {
     try {
       const { v } = await api('GET', '/api/version');
       if (build === null) build = v;
-      else if (v !== build && !Call.active() && !/^#\/admin/.test(location.hash) && !/^#\/club\/./.test(location.hash) && !$('#input').value.trim()) location.reload();
+      else if (v !== build && !Call.active() && !/^#\/admin/.test(location.hash) && !/^#\/geo/.test(location.hash) && !/^#\/club\/./.test(location.hash) && !$('#input').value.trim()) location.reload();
     } catch {}
   }
   function bind(es) {
