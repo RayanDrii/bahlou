@@ -590,10 +590,14 @@ process.on('SIGUSR2', () => {
   let result;
   try {
     const cmd = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (cmd.removeTestUser === 'test.reseau') {
-      delete db.users['test.reseau'];
-      for (const [t, s] of Object.entries(db.sessions)) if (s.name === 'test.reseau') delete db.sessions[t];
-      delete db.games?.players?.['test.reseau'];
+    // seuls les comptes de test (« test.quelquechose ») peuvent être supprimés par cette commande
+    if (typeof cmd.removeTestUser === 'string' && /^test\.[a-z0-9]{1,24}$/.test(cmd.removeTestUser)) {
+      const gone = cmd.removeTestUser;
+      delete db.users[gone];
+      for (const [t, s] of Object.entries(db.sessions)) if (s.name === gone) delete db.sessions[t];
+      for (const c of clients) if (c.user === gone) c.close();
+      delete db.games?.players?.[gone];
+      delete db.words?.stats?.[gone];
       save(); broadcast('users', publicUsers());
       fs.rmSync(file, { force: true });
       fs.writeFileSync(path.join(DATA_DIR, 'admin-result.json'), '{"removed":true}', { mode: 0o600 });
