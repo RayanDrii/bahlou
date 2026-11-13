@@ -1,0 +1,15 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bahlou</title><style>
+@font-face{font-family:BS;src:url(fonts/big-shoulders.woff2) format("woff2");font-weight:500 900}
+@font-face{font-family:AR;src:url(fonts/archivo.woff2) format("woff2");font-weight:400 700}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);background:#111113;color:#f2efe6;font:400 15px/1.5 AR,sans-serif;user-select:none;cursor:default}
+.k{position:absolute;top:28px;left:28px;width:min(24vw,26vh);display:block}
+.w{position:relative;display:flex;align-items:flex-end;padding:28px;background:#ff4a1f;color:#111113;font:900 min(24vw,40vh)/.78 BS,Impact,sans-serif;white-space:pre;overflow:hidden}
+main{place-self:center;width:100%;max-width:340px;padding:24px}
+h1{margin:0 0 8px;font:900 54px/.9 BS,Impact,sans-serif;text-transform:uppercase}
+p{margin:0;color:#aeaaa1}
+button{font:900 25px/1 BS,Impact,sans-serif;text-transform:uppercase;cursor:pointer;border:0;padding:0}
+.a{margin-top:22px;display:flex;flex-direction:column;gap:6px}.a button{height:50px;background:#ff4a1f;color:#111113}.a button:hover{background:#f2efe6}.a button+button{background:#26262b;color:#f2efe6}.a button+button:hover{background:#f2efe6;color:#111113}
+</style></head><body><div class="w"><img class="k" src="logo-block.png" alt="">BAH
+LOU</div><main><h1>Serveur muet</h1><p>Le serveur ne répond pas.</p><p id="u" style="font-size:13px;margin-top:4px;color:#8b8880"></p><div class="a"><button id="x">Réessayer</button><button id="c">Changer d'adresse</button></div></main>
+<script>bahlou.getUrl().then(v=>u.textContent=v);x.onclick=()=>bahlou.retry();c.onclick=()=>bahlou.changeServer();</script></body></html>

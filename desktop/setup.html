@@ -1,0 +1,19 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bahlou</title><style>
+@font-face{font-family:BS;src:url(fonts/big-shoulders.woff2) format("woff2");font-weight:500 900}
+@font-face{font-family:AR;src:url(fonts/archivo.woff2) format("woff2");font-weight:400 700}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);background:#111113;color:#f2efe6;font:400 15px/1.5 AR,sans-serif;user-select:none;cursor:default}
+.k{position:absolute;top:28px;left:28px;width:min(24vw,26vh);display:block}
+.w{position:relative;display:flex;align-items:flex-end;padding:28px;background:#ff4a1f;color:#111113;font:900 min(24vw,40vh)/.78 BS,Impact,sans-serif;white-space:pre;overflow:hidden}
+main{place-self:center;width:100%;max-width:340px;padding:24px}
+h1{margin:0 0 8px;font:900 54px/.9 BS,Impact,sans-serif;text-transform:uppercase}
+p{margin:0;color:#aeaaa1}
+button{font:900 25px/1 BS,Impact,sans-serif;text-transform:uppercase;cursor:pointer;border:0;padding:0}
+form{width:100%;margin-top:18px}label{display:block;font-size:12px;color:#aeaaa1;margin-bottom:6px}
+input{width:100%;height:48px;padding:0 14px;background:#26262b;border:0;border-bottom:3px solid transparent;outline:0;color:inherit;font:inherit;user-select:text}input:focus{border-color:#ff4a1f}input::placeholder{color:#8b8880}
+.e{min-height:21px;margin:8px 0 6px;color:#ff5a3c;font-size:14px}
+.go{width:100%;height:56px;background:#ff4a1f;color:#111113}.go:hover{background:#f2efe6}
+</style></head><body><div class="w"><img class="k" src="logo-block.png" alt="">BAH
+LOU</div><main><h1>Connexion</h1><p>Saisis l'adresse remise par l'admin.</p>
+<form id="f"><label for="u">Adresse du serveur</label><input id="u" autocomplete="off" autofocus spellcheck="false" placeholder="https://"><p class="e" id="e"></p><button class="go" type="submit">Entrer</button></form></main>
+<script>const u=document.getElementById('u'),e=document.getElementById('e');bahlou.getUrl().then(v=>{if(v)u.value=v});document.getElementById('f').addEventListener('submit',async ev=>{ev.preventDefault();e.textContent='';const r=await bahlou.setUrl(u.value);if(!r.ok)e.textContent=r.error||'Adresse invalide'});</script></body></html>

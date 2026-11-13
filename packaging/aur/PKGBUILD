@@ -1,0 +1,40 @@
+# Maintainer: RayanDrii <https://github.com/RayanDrii>
+pkgname=bahlou
+pkgver=2.3.0
+pkgrel=1
+pkgdesc="Application de bureau Bahlou : messagerie de promo, jeux et suivi Epitech"
+arch=('x86_64')
+url="https://github.com/RayanDrii/bahlou"
+license=('LicenseRef-All-Rights-Reserved')
+depends=('alsa-lib' 'at-spi2-core' 'gtk3' 'libnotify' 'libsecret' 'libxss' 'libxtst' 'nss' 'util-linux-libs' 'xdg-utils')
+makedepends=('git' 'nodejs' 'npm')
+options=('!strip' '!debug')
+source=("$pkgname::git+https://github.com/RayanDrii/bahlou.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+build() {
+  cd "$pkgname/desktop"
+  export npm_config_cache="$srcdir/npm-cache"
+  npm ci
+  npx --no-install electron-builder --dir --publish never
+}
+
+package() {
+  cd "$pkgname/desktop"
+  install -d "$pkgdir/opt" "$pkgdir/usr/bin"
+  cp -a dist/linux-unpacked "$pkgdir/opt/bahlou"
+  chmod 4755 "$pkgdir/opt/bahlou/chrome-sandbox"
+  ln -s /opt/bahlou/bahlou "$pkgdir/usr/bin/bahlou"
+  install -Dm644 build/icon.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/bahlou.png"
+  install -Dm644 /dev/stdin "$pkgdir/usr/share/applications/bahlou.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Bahlou
+Comment=La messagerie de la promo
+Exec=/usr/bin/bahlou %U
+Icon=bahlou
+Terminal=false
+Categories=Network;Chat;InstantMessaging;
+StartupWMClass=Bahlou
+DESKTOP
+}

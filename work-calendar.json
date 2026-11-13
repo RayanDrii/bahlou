@@ -1,0 +1,14 @@
+{
+  "events": [
+    {
+      "id": "myls-def",
+      "title": "Soutenance my_ls",
+      "at": "2026-11-10T09:00:00+01:00"
+    },
+    {
+      "id": "settingup-def",
+      "title": "Soutenance SettingUp",
+      "at": "2026-11-20T09:00:00+01:00"
+    }
+  ]
+}

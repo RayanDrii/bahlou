@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Télécharger Bahlou</title>
+  <link rel="icon" href="/icon.png" type="image/png">
+  <meta name="theme-color" content="#ffd21f">
+  <style>
+    @font-face { font-family: "Big Shoulders"; src: url("/fonts/big-shoulders.woff2") format("woff2"); font-weight: 500 900; font-display: swap; }
+    @font-face { font-family: "Archivo"; src: url("/fonts/archivo.woff2") format("woff2"); font-weight: 400 700; font-display: swap; }
+    @font-face { font-family: "Martian Mono"; src: url("/fonts/martian-mono.woff2") format("woff2"); font-weight: 400 600; font-display: swap; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body { background: #111113; color: #f2efe6; font: 400 16px/1.5 "Archivo", Arial, sans-serif; }
+    header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 22px clamp(16px, 4vw, 44px) 14px; background: #ffd21f; color: #111113; }
+    .k { position: relative; flex: none; width: clamp(72px, 15vw, 190px); aspect-ratio: 1; background: #111113; }
+    .k::after { content: ""; position: absolute; inset: 0; background: #ffd21f; -webkit-mask: url("/logo.png") center bottom / contain no-repeat; mask: url("/logo.png") center bottom / contain no-repeat; }
+    header h1 { margin: 0; font: 900 clamp(84px, 21vw, 260px)/.8 "Big Shoulders", Impact, sans-serif; }
+    main { max-width: 1000px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 44px) 70px; }
+    h2 { margin: 42px 0 12px; font: 900 44px/1 "Big Shoulders", Impact, sans-serif; text-transform: uppercase; }
+    p { margin: 0 0 10px; color: #aeaaa1; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
+    .card { display: flex; flex-direction: column; gap: 10px; padding: 20px; background: #19191c; }
+    .card h3 { margin: 0; font: 900 34px/1 "Big Shoulders", Impact, sans-serif; text-transform: uppercase; }
+    .card p { flex: 1; font-size: 14.5px; }
+    code { display: block; padding: 9px 10px; background: #26262b; color: #f2efe6; font: 400 11.5px/1.6 "Martian Mono", monospace; overflow-wrap: anywhere; user-select: all; }
+    a.dl, button { display: block; width: 100%; padding: 13px 16px; border: 0; background: #ffd21f; color: #111113; font: 900 25px/1 "Big Shoulders", Impact, sans-serif; text-transform: uppercase; text-align: center; text-decoration: none; cursor: pointer; }
+    a.dl:hover, button:hover { background: #f2efe6; }
+    ol { margin: 0; padding-left: 24px; }
+    li { margin: 8px 0; }
+    .addr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; margin: 10px 0 0; }
+    .addr code { display: flex; align-items: center; font-size: 13px; }
+    .addr button { width: auto; font-size: 21px; }
+    .addr code.big { padding: 14px 16px; font-size: 22px; color: #ffd21f; }
+    [hidden] { display: none !important; }
+    a { color: #ffd21f; }
+    b { font-weight: 600; color: #f2efe6; }
+  </style>
+</head>
+<body>
+  <header><h1>BAHLOU</h1><i class="k" aria-hidden="true"></i></header>
+  <main>
+    <h2>1. Installe l'appli</h2>
+    <div class="grid">
+      <article class="card">
+        <h3>Ubuntu, Debian</h3>
+        <p>Après le téléchargement, lance depuis ton dossier de téléchargements :</p>
+        <code>sudo apt install ./bahlou.deb</code>
+        <a class="dl" href="/download/bahlou.deb" download>Télécharger</a>
+      </article>
+      <article class="card">
+        <h3>Arch</h3>
+        <p>Après le téléchargement, lance depuis ton dossier de téléchargements :</p>
+        <code>sudo pacman -U bahlou.pacman</code>
+        <a class="dl" href="/download/bahlou.pacman" download>Télécharger</a>
+      </article>
+      <article class="card">
+        <h3>Autre Linux</h3>
+        <p>Un seul fichier, sans installation :</p>
+        <code>chmod +x Bahlou.AppImage &amp;&amp; ./Bahlou.AppImage</code>
+        <a class="dl" href="/download/Bahlou.AppImage" download>Télécharger</a>
+      </article>
+    </div>
+    <p style="margin-top:14px">Sur Windows, Mac ou téléphone, <a href="/">ouvre Bahlou dans le navigateur</a> : le Salon et les Jeux fonctionnent, mais la connexion à my.epitech demande l'appli.</p>
+
+    <h2>2. Connecte l'appli</h2>
+    <ol>
+      <li>Ouvre l'appli : elle se connecte toute seule.</li>
+      <li>Choisis <b>Inscription</b> et crée ton compte.</li>
+      <li>Colle le <b>code d'invitation</b> ci-dessous.</li>
+    </ol>
+
+    <h2>Code d'invitation</h2>
+    <div class="addr" id="invite-box" hidden><code id="invite" class="big"></code><button type="button" id="copy-invite">Copier</button></div>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const copier = (btn, box, text) => (btn.onclick = async () => {
+      try { await navigator.clipboard.writeText(text); btn.textContent = 'Copié'; }
+      catch { getSelection().selectAllChildren(box); btn.textContent = 'Fais Ctrl+C'; }
+    });
+    fetch('/api/invite').then((r) => r.json()).then(({ invite }) => {
+      $('invite').textContent = invite;
+      $('invite-box').hidden = false;
+      copier($('copy-invite'), $('invite'), invite);
+    }).catch(() => {});
+  </script>
+</body>
+</html>

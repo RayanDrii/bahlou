@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bahlou</title>
+  <link rel="icon" href="/icon.png" type="image/png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#ff4a1f">
+  <link rel="preload" href="/fonts/big-shoulders.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/club.css">
+  <link rel="stylesheet" href="/work.css">
+  <link rel="stylesheet" href="/call.css">
+  <link rel="stylesheet" href="/extra.css">
+  <link rel="stylesheet" href="/fx.css">
+  <link rel="stylesheet" href="/anim.css">
+  <link rel="stylesheet" href="/casino.css">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <!-- ===================================================== CONNEXION -->
+  <section id="auth" class="auth" hidden>
+    <form id="auth-form" class="auth-card" autocomplete="on" novalidate>
+      <div class="wordmark">BAHLOU</div>
+      <div class="rule"></div>
+      <h2 id="auth-title">Connexion</h2>
+      <p class="muted" id="auth-sub">Sur invitation uniquement.</p>
+
+      <div class="seg" role="tablist">
+        <button type="button" class="seg-btn active" data-mode="login">Connexion</button>
+        <button type="button" class="seg-btn" data-mode="register">Inscription</button>
+      </div>
+
+      <div class="register-only pfp-row" hidden>
+        <label class="pfp-pick" title="Ajouter une photo">
+          <span class="pfp-slot" id="reg-avatar"></span>
+          <input type="file" accept="image/*" id="reg-file" hidden>
+        </label>
+        <div><strong>Portrait</strong><small class="muted">Facultatif.</small></div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Identifiant</span>
+        <input name="username" required minlength="2" maxlength="40" autocomplete="username" placeholder="prenom.nom" spellcheck="false" autocapitalize="off">
+      </label>
+
+      <label class="field">
+        <span class="field-label">Mot de passe</span>
+        <span class="field-pw">
+          <input name="password" type="password" required minlength="6" autocomplete="current-password">
+          <button type="button" class="eye" id="eye" aria-label="Afficher le mot de passe">Voir</button>
+        </span>
+      </label>
+
+      <label class="field register-only invite-field" hidden>
+        <span class="field-label">Code d'invitation</span>
+        <input name="invite" autocomplete="off" spellcheck="false">
+      </label>
+
+      <p id="auth-error" class="auth-error" role="alert"></p>
+
+      <button type="submit" class="cta" id="auth-submit">
+        <span class="cta-label">Entrer</span>
+        <span class="spinner"></span>
+      </button>
+    </form>
+  </section>
+
+  <!-- ===================================================== APPLI -->
+  <section id="app" class="app" hidden>
+    <nav class="topbar" aria-label="Navigation">
+      <a class="wordmark" href="#/chat">BAHLOU</a>
+      <div class="tabs-main">
+        <a href="#/chat" data-tab="chat">Salon<span class="r-badge" id="rail-chat-badge" hidden></span></a>
+        <a href="#/club" data-tab="club">Casino<span class="r-dot" id="rail-club-dot" hidden></span></a>
+        <a href="#/cards" data-tab="cards">Caisses</a>
+        <a href="#/work" data-tab="work">Travail<span class="r-dot" id="rail-work-dot" hidden></span></a>
+        <a href="#/admin" data-tab="admin" id="tab-admin" hidden>Admin</a>
+      </div>
+      <div class="call-rail" id="call-rail" hidden></div>
+      <div class="top-me">
+        <div><b id="rail-name"></b><small id="rail-rank"></small></div>
+        <button type="button" class="me-btn" id="me-btn" aria-label="Mon profil"></button>
+      </div>
+    </nav>
+
+    <main class="club" id="club" hidden>
+      <header class="club-top">
+        <div class="subnav">
+          <a href="#/club" data-nav="club">Salle de jeux</a>
+          <a href="#/cashier" data-nav="cashier">Bonus<span class="r-dot" id="cash-dot" hidden></span></a>
+          <a href="#/tourney" data-nav="tourney">Tournoi</a>
+          <a href="#/board" data-nav="board">Classement</a>
+          <a href="#/shop" data-nav="shop">Boutique</a>
+          <a href="#/trophies" data-nav="trophies">Palmarès</a>
+        </div>
+        <span class="golden" id="ct-golden" hidden></span>
+        <span class="ct-streak" id="ct-streak"></span>
+        <a class="ct-lvl" id="ct-lvl" href="#/trophies"></a>
+        <div class="balance"><i class="coin"></i><span class="js-coins">0</span></div>
+      </header>
+      <div class="club-body" id="club-body"></div>
+    </main>
+
+    <main class="admin" id="admin-view" hidden><div class="work-body" id="admin-body"></div></main>
+
+    <main class="work" id="work" hidden><div class="work-body" id="work-body"></div></main>
+
+    <main class="chat" id="chat-view">
+      <header class="chat-head">
+        <div class="chat-id">
+          <h2>Le Salon</h2>
+          <small id="chat-sub"></small>
+        </div>
+        <div class="facepile" id="facepile"></div>
+        <span class="conn" id="conn"><span>Reconnexion</span></span>
+        <button type="button" class="call-btn" id="call-btn">Appeler</button>
+        <button type="button" class="txt-btn" id="toggle-members">Membres</button>
+      </header>
+
+      <section class="call" id="call" hidden><div id="call-body"></div></section>
+
+      <div class="messages" id="messages"></div>
+
+      <button type="button" class="to-bottom" id="to-bottom" aria-label="Aller en bas">
+        <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+        <span id="to-bottom-count"></span>
+      </button>
+
+      <div class="typing" id="typing"></div>
+
+      <div class="compose-extra" id="compose-extra" hidden></div>
+      <form class="composer" id="composer">
+        <button type="button" class="emoji-btn" id="emoji-btn" aria-label="Émojis">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1"><circle cx="12" cy="12" r="9"/><path d="M8 14.5c1 1.4 2.4 2 4 2s3-.6 4-2"/><path d="M9 9.5v.5M15 9.5v.5"/></svg>
+        </button>
+        <button type="button" class="tool-btn" id="attach-btn" title="Envoyer une image" aria-label="Envoyer une image">+</button>
+        <button type="button" class="tool-btn" id="poll-btn" title="Créer un sondage" aria-label="Créer un sondage">?</button>
+        <input type="file" accept="image/*" id="attach-file" hidden>
+        <textarea id="input" rows="1" maxlength="2000" placeholder="Écrire au Salon" autocomplete="off"></textarea>
+        <button type="submit" class="send" id="send" disabled>Envoyer</button>
+        <div class="emoji-pop" id="emoji-pop" hidden></div>
+      </form>
+    </main>
+
+    <aside class="members" id="members">
+      <header class="side-head">
+        <h1>Membres</h1>
+        <button type="button" class="txt-btn" id="close-members">Fermer</button>
+      </header>
+      <div class="side-scroll" id="member-list"></div>
+    </aside>
+  </section>
+
+  <!-- profil -->
+  <div class="modal-wrap" id="profile" hidden>
+    <div class="modal profile">
+      <button type="button" class="txt-btn modal-x" id="profile-close">Fermer</button>
+      <label class="pfp-pick big" id="profile-pick" title="Changer le portrait">
+        <span class="pfp-slot" id="profile-avatar"></span>
+        <input type="file" accept="image/*" id="profile-file" hidden>
+      </label>
+      <h2 id="profile-name"></h2>
+      <div class="profile-actions">
+        <button type="button" class="row-btn" id="pfp-change">Changer le portrait</button>
+        <button type="button" class="row-btn" id="pfp-remove">Retirer le portrait</button>
+        <button type="button" class="row-btn" id="sound-toggle"><span id="sound-label">Sons activés</span></button>
+        <button type="button" class="row-btn" id="lite-toggle"><span id="lite-label">Mode fluide coupé</span></button>
+        <button type="button" class="row-btn" id="logout">Se déconnecter</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-plan" id="w-plan" hidden></div>
+  <div class="call-ring" id="call-ring" hidden></div>
+  <div class="modal-wrap" id="poll-modal" hidden><div class="modal"><button type="button" class="txt-btn modal-x" id="poll-close">Fermer</button><h2>Sondage</h2><form class="poll-form" id="poll-form"><input name="q" maxlength="200" required placeholder="Ta question"><div id="poll-opts"></div><button type="button" class="row-btn" id="poll-add">Ajouter un choix</button><button type="submit" class="cta"><span class="cta-label">Publier</span></button></form></div></div>
+  <div class="lightbox" id="lightbox" hidden></div>
+  <div class="toasts" id="toasts"></div>
+  <div class="pops" id="pops"></div>
+
+  <script src="/app.js"></script>
+  <script src="/fx.js"></script>
+  <script src="/anim.js"></script>
+  <script src="/icons.js"></script>
+  <script src="/casino-art.js"></script>
+  <script src="/club.js"></script>
+  <script src="/club-games.js"></script>
+  <script src="/club-extra.js"></script>
+  <script src="/work.js"></script>
+  <script src="/call.js"></script>
+  <script src="/admin.js"></script>
+  <script>start();</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bahlou</title><style>
+@font-face{font-family:Bodoni;src:url(fonts/bodoni.woff2) format("woff2");font-weight:400 900}
+@font-face{font-family:Jost;src:url(fonts/jost.woff2) format("woff2");font-weight:100 900}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{display:grid;place-items:center;background:#0b0b0b;color:#f2eee5;font:400 15px/1.5 Jost,sans-serif;user-select:none;cursor:default}
+main{width:320px;text-align:center;display:flex;flex-direction:column;align-items:center;animation:f 1s cubic-bezier(.22,1,.36,1)}
+@keyframes f{from{opacity:0;transform:translateY(6px)}}
+.w{font:400 32px/1 Bodoni,serif;letter-spacing:.34em;padding-left:.34em}.r{width:34px;height:1px;background:#c8a96a;margin:26px 0}
+p{margin:0;color:#a09b8f}
+button{font:inherit;cursor:pointer;background:none;border:0;padding:0}
+.a{margin-top:30px;display:flex;gap:30px;font-size:11px;letter-spacing:.22em;text-transform:uppercase}.a button{color:#c8a96a;text-transform:inherit;letter-spacing:inherit;transition:color .4s}.a button:hover{color:#f2eee5}.a button+button{color:#6b675e}
+</style></head><body><main><div class="w">BAHLOU</div><div class="r"></div><p>Le serveur ne répond pas.</p><p id="u" style="color:#6b675e;font-size:13px;margin-top:4px"></p><div class="a"><button id="x">Réessayer</button><button id="c">Changer d'adresse</button></div></main>
+<script>bahlou.getUrl().then(v=>u.textContent=v);x.onclick=()=>bahlou.retry();c.onclick=()=>bahlou.changeServer();</script></body></html>

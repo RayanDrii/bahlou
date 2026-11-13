@@ -1,0 +1,26 @@
+pkgbase = bahlou
+	pkgdesc = Application de bureau Bahlou : messagerie de promo, jeux et suivi Epitech
+	pkgver = 2.3.0
+	pkgrel = 1
+	url = https://github.com/RayanDrii/bahlou
+	arch = x86_64
+	license = LicenseRef-All-Rights-Reserved
+	makedepends = git
+	makedepends = nodejs
+	makedepends = npm
+	depends = alsa-lib
+	depends = at-spi2-core
+	depends = gtk3
+	depends = libnotify
+	depends = libsecret
+	depends = libxss
+	depends = libxtst
+	depends = nss
+	depends = util-linux-libs
+	depends = xdg-utils
+	options = !strip
+	options = !debug
+	source = bahlou::git+https://github.com/RayanDrii/bahlou.git#tag=v2.3.0
+	sha256sums = SKIP
+
+pkgname = bahlou
