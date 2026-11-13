@@ -65,3 +65,61 @@ Onze jeux intégrés à la messagerie. Tables : Roulette, Blackjack, Hold'em. Je
 - Tous les tirages et les soldes sont calculés côté serveur.
 - Les bahlous sont fictifs : ni achat, ni échange, ni retrait. À garder ainsi, sinon ça relève de la réglementation des jeux d'argent.
 - Déployer : `./install.sh serveur`.
+
+## Geo : explorer le monde entre amis
+
+L'onglet **Geo** permet de créer un salon privé et de partager son lien ou son
+code avec 2 à 12 joueurs disposant d'un compte Bahlou. Cinq manches de 90 secondes :
+explorez le même départ dans Street View, placez votre point sur la carte et
+confirmez. La réponse devient définitive ; les propositions sont révélées quand
+tous ont répondu ou à la fin du temps. L'hôte lance la manche suivante, puis peut
+relancer une partie. Aucune mise et aucun mouvement de bahlous.
+
+### Configuration Google Maps
+
+L'hébergeur doit activer **Maps JavaScript API** dans son projet Google Cloud,
+avec la facturation requise par Google, puis fournir `GOOGLE_MAPS_API_KEY` au
+processus Node.js. Ne mettez pas la clé dans le dépôt ou une commande partagée.
+Pour le service systemd, ajoutez cette variable via `systemctl --user edit bahlou`
+(ou l'environnement du service système pour une installation Azure), puis
+redémarrez le service. Un lancement sans cette variable laisse le reste du site
+fonctionnel et affiche dans Geo une explication de la configuration manquante.
+
+Cette clé est une **clé navigateur**, visible pour les joueurs connectés.
+Restreignez-la par référents HTTP à votre domaine Bahlou (avec `/*`) et par API
+à Maps JavaScript API ; autorisez séparément localhost uniquement pour les essais.
+Configurez les quotas Google et des alertes de budget : Google facture les cartes
+et panoramas selon son offre, et une alerte budgétaire ne bloque pas les dépenses.
+Le chargement est déclenché au lancement d'une partie ou à l'ouverture de sa carte,
+pas dans le Salon ou le Casino. Les marqueurs utilisent le map ID de démonstration
+Google, sans personnalisation de carte.
+
+Références officielles : [clé et restrictions](https://developers.google.com/maps/documentation/javascript/get-api-key),
+[Street View](https://developers.google.com/maps/documentation/javascript/streetview),
+[usage et facturation](https://developers.google.com/maps/documentation/javascript/usage-and-billing).
+Une erreur de clé, de facturation, de réseau ou d'imagerie est affichée dans Geo ;
+aucune vue simulée ne remplace Street View.
+
+### Fonctionnement et limites
+
+- Les salons sont privés par code et les événements sont envoyés à leurs membres.
+- Les salons restent en mémoire sur **un seul processus** : redémarrer le serveur
+  les efface. Ils expirent après une heure sans action ; laisser une page ouverte
+  ne conserve pas un salon indéfiniment.
+- Recharger la page ou perdre brièvement la connexion conserve sa réponse et le
+  chronomètre serveur. « Quitter » est un départ définitif pour la partie ; si
+  l'hôte quitte, un autre participant prend la main.
+- Les scores sont calculés côté serveur : distance sur la sphère terrestre,
+  puis `arrondi(5000 × exp(-distanceKm / 2000))`. Les égalités sont partagées.
+- C'est un jeu amical : l'hôte prépare les lieux disponibles dans son navigateur,
+  et Google transmet les métadonnées de la vue au navigateur. Il n'y a pas de
+  protection contre un joueur inspectant ces données. Les lieux sont choisis
+  parmi un premier ensemble de points candidats mondiaux ; l'ordre est mélangé.
+
+### Vérifications locales
+
+Pas de dépendance à installer. `node tests/geo.test.js` vérifie le moteur et
+`node tests/geo-http.test.js` lance de vrais serveurs locaux avec des données et
+comptes temporaires, puis les supprime. Aucun appel Google n'est effectué par ces
+tests. L'affichage et les déplacements Street View doivent être vérifiés avec une
+clé Google configurée avant mise en ligne. `npm test` lance l'ensemble des tests.
