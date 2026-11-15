@@ -7,12 +7,12 @@
   --gold-metal: linear-gradient(180deg, #fff0b8, #e9bf5a 48%, #b98a2c);
   --felt-lit: radial-gradient(ellipse at 50% 38%, #12835b 0%, #0b5f42 52%, #063a29 100%);
 }
-:root[data-page="club"] .topbar { background: var(--night); color: var(--acc); box-shadow: inset -2px 0 0 var(--acc); }
-:root[data-page="club"] .tabs-main a { border-color: var(--line); }
-:root[data-page="club"] .tabs-main a:hover { background: var(--ink-3); }
-:root[data-page="club"] .tabs-main a.on { background: var(--gold-metal); color: var(--on-acc); }
-:root[data-page="club"] .tabs-main a::after { background: var(--acc); }
-:root[data-page="club"] .tabs-main a.on::after { background: var(--on-acc); }
+:root[data-zone="jeux"] .topbar { background: var(--night); color: var(--acc); box-shadow: inset -2px 0 0 var(--acc); }
+:root[data-zone="jeux"] .tabs-main a { border-color: var(--line); }
+:root[data-zone="jeux"] .tabs-main a:hover { background: var(--ink-3); }
+:root[data-zone="jeux"] .tabs-main a.on { background: var(--gold-metal); color: var(--on-acc); }
+:root[data-zone="jeux"] .tabs-main a::after { background: var(--acc); }
+:root[data-zone="jeux"] .tabs-main a.on::after { background: var(--on-acc); }
 
 .club { background: var(--felt-lit) fixed; }
 .club-top { background: var(--night); box-shadow: inset 0 -2px 0 var(--acc); }

@@ -210,6 +210,7 @@ const Club = (() => {
     $('#rail-rank').textContent = `${m.rank}, niveau ${m.level}`;
     const bonus = m.canDaily || m.wheelFree || remaining(m.chestIn) === 0;
     $('#rail-club-dot').hidden = !bonus; $('#cash-dot').hidden = !bonus;
+    document.querySelectorAll('.js-bonus-dot').forEach((d) => (d.hidden = !bonus));
   }
   function paintTicker() {
     const box = document.querySelector('#ct-ticker');
@@ -294,6 +295,45 @@ const Club = (() => {
     ctx.on('crash', badges);
     ctx.on('poker', badges);
     ctx.on('jackpot', () => { jack.textContent = fmt(C.jackpot); });
+  }
+
+  /* ---------- accueil de l'onglet Jeux : les trois espaces, ce qui attend, et les derniers jeux */
+  const HUB_ART = {
+    cards: '<rect x="14" y="40" width="68" height="42" rx="4" fill="#3b2a12"/><rect x="14" y="40" width="68" height="10" fill="#e9bf5a"/><rect x="42" y="40" width="12" height="42" fill="#e9bf5a"/><g transform="rotate(-12 38 30)"><rect x="24" y="8" width="26" height="36" rx="3" fill="#f2efe6"/><rect x="28" y="12" width="18" height="18" rx="2" fill="#c79bff"/></g><g transform="rotate(10 60 28)"><rect x="48" y="6" width="26" height="36" rx="3" fill="#f2efe6"/><rect x="52" y="10" width="18" height="18" rx="2" fill="#ff4a1f"/></g>',
+    geo: '<circle cx="48" cy="50" r="34" fill="#4aa8ff"/><path d="M26 34c8-2 12 4 18 2s6-10 14-8 10 10 6 16-12 4-14 10 4 12-2 16-12-2-14-10-12-6-12-14 0-10 4-12Z" fill="#8ce7b2"/><path d="M48 6c-9 0-16 7-16 16 0 12 16 28 16 28s16-16 16-28c0-9-7-16-16-16Z" fill="#ff4a1f"/><circle cx="48" cy="22" r="6" fill="#f2efe6"/>',
+  };
+  function renderHub(root, ctx) {
+    const recent = store.get('recent', []).map((id) => GAMES.find((g) => g.id === id)).filter(Boolean).slice(0, 4);
+    const total = C.cfg.cards.length;
+    root.innerHTML = `<div class="hub">
+      <header class="hub-head"><small>Jeux</small><h1>Choisis ton jeu</h1><p>Tout se joue avec tes bahlous, et ton solde te suit partout.</p></header>
+      <section class="hub-todo" id="hub-todo" aria-live="polite"></section>
+      <section class="hub-grid">
+        <a class="hub-card hc-casino" href="#/club"><span class="hc-art"><svg viewBox="0 0 96 96" aria-hidden="true" style="--i-c:#0b5a3f">${Icons.roulette}</svg></span>
+          <div class="hc-txt"><small>${GAMES.length} jeux</small><h2>Casino</h2><p>Roulette, blackjack, poker, machines à sous, Crash et le reste.</p></div>
+          <dl class="hc-fact"><dt>Jackpot</dt><dd id="hub-jack">${fmt(C.jackpot)}</dd></dl><span class="hc-go">Entrer</span></a>
+        <a class="hub-card hc-cards" href="#/cards"><span class="hc-art"><svg viewBox="0 0 96 96" aria-hidden="true">${HUB_ART.cards}</svg></span>
+          <div class="hc-txt"><small>Collection</small><h2>Caisses</h2><p>Ouvre des caisses, tombe sur des cartes rares, complète les séries.</p></div>
+          <dl class="hc-fact"><dt>Tes cartes</dt><dd id="hub-have"></dd></dl><span class="hc-go">Ouvrir</span></a>
+        <a class="hub-card hc-geo" href="#/geo"><span class="hc-art"><svg viewBox="0 0 96 96" aria-hidden="true">${HUB_ART.geo}</svg></span>
+          <div class="hc-txt"><small>Street View</small><h2>Bahlou Guessr</h2><p>Lâché quelque part sur Terre : trouve où tu es, seul ou entre potes.</p></div>
+          <dl class="hc-fact"><dt>Parties</dt><dd>Solo ou en salon</dd></dl><span class="hc-go">Partir</span></a>
+      </section>
+      ${recent.length ? `<h2 class="lb-sec">Reprendre</h2><section class="tiles hub-recent">${recent.map(tileHtml).join('')}</section>` : ''}
+    </div>`;
+    const paint = () => {
+      const m = C.me, chest = remaining(m.chestIn), box = $('#hub-todo', root);
+      const own = m.cards || {};
+      $('#hub-have', root).textContent = `${C.cfg.cards.filter((c) => own[c.id] > 0).length} / ${total}`;
+      const ready = [m.canDaily && ['#/cashier', 'Bonus du jour', 'À récupérer'], m.wheelFree && ['#/club/wheel', 'Tour de roue', 'Offert aujourd’hui'], !chest && ['#/cashier', 'Le Coffre', 'Prêt à ouvrir']].filter(Boolean);
+      box.innerHTML = ready.length
+        ? `<b>À récupérer</b>${ready.map(([href, name, state]) => `<a href="${href}"><span>${name}</span><small>${state}</small></a>`).join('')}`
+        : `<b>Tout est récupéré</b><span class="hub-next">Prochain coffre dans ${dur(chest)}</span>`;
+    };
+    paint();
+    ctx.every(30000, paint);
+    ctx.on('me', paint);
+    ctx.on('jackpot', () => { const j = $('#hub-jack', root); if (j) j.textContent = fmt(C.jackpot); });
   }
 
   /* ---------- caisse : bonus et missions */
@@ -425,6 +465,7 @@ const Club = (() => {
     const inWork = page === 'work';
     const inAdmin = page === 'admin';
     const inClub = page !== 'chat' && !inWork && !inAdmin && !inGeo;
+    const inCasino = inClub && page !== 'jeux' && page !== 'cards';
     $('#chat-view').hidden = inClub || inWork || inAdmin || inGeo;
     $('#geo-view').hidden = !inGeo;
     $('#club').hidden = !inClub;
@@ -432,7 +473,11 @@ const Club = (() => {
     $('#admin-view').hidden = !inAdmin;
     $('#app').classList.toggle('in-club', inClub || inWork || inAdmin || inGeo);
     document.documentElement.dataset.page = inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? 'club' : 'chat';
-    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? (page === 'cards' ? 'cards' : 'club') : 'chat')));
+    document.documentElement.dataset.zone = inGeo || inClub ? 'jeux' : '';
+    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inGeo || inClub ? 'jeux' : inAdmin ? 'admin' : inWork ? 'work' : 'chat')));
+    const hub = inGeo ? 'geo' : page === 'jeux' || page === 'cards' ? page : 'club';
+    document.querySelectorAll('.hub-switch a').forEach((a) => { const on = a.dataset.hub === hub; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    $('#casino-nav').hidden = !inCasino;
     Geo.stop();
     Work.stop();
     Admin.stop();
@@ -452,6 +497,7 @@ const Club = (() => {
       games[sub](body, ctx);
       body.querySelector('.gm-p')?.insertAdjacentHTML('beforeend', '<div class="kv gm-last"><span>Dernier gain</span><b>—</b></div>');
     }
+    else if (page === 'jeux') renderHub(body, ctx);
     else if (page === 'cashier') renderCashier(body, ctx);
     else if (page === 'shop') renderShop(body, ctx);
     else if (page === 'board') renderBoard(body, ctx);

@@ -1,0 +1,95 @@
+/* Onglet Jeux : Casino, Caisses et Guessr partagent le même rail, la même barre et le même solde. */
+:root[data-zone="jeux"] .topbar, .club-top {
+  --night: #05120d; --acc: #e9bf5a; --on-acc: #1a1204; --ink-3: #103a2c; --ash: #b8c7bd;
+  --line: rgba(233, 191, 90, .22);
+  --gold-metal: linear-gradient(180deg, #fff0b8, #e9bf5a 48%, #b98a2c);
+}
+
+/* ---------- barre des trois espaces */
+.club-top { gap: 14px; }
+.hub-switch { flex: 1; display: flex; align-items: stretch; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.hub-switch::-webkit-scrollbar { display: none; }
+.hub-switch a { position: relative; display: flex; align-items: center; gap: 8px; padding: 0 20px; font: 900 27px/1 var(--display); text-transform: uppercase; color: var(--ash); white-space: nowrap; transition: color .15s, background .15s; }
+.hub-switch a:hover { color: #fff; background: rgba(233, 191, 90, .08); }
+.hub-switch a.on { color: var(--on-acc); background: var(--gold-metal); }
+.hub-switch a:first-child { padding-left: clamp(14px, 2vw, 24px); }
+.club-top:has(.hub-switch) { padding-left: 0; }
+.hub-switch .r-dot:not([hidden]) { display: inline-block; }
+.hub-switch { --grid-ico: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect width='8' height='8'/%3E%3Crect x='10' width='8' height='8'/%3E%3Crect y='10' width='8' height='8'/%3E%3Crect x='10' y='10' width='8' height='8'/%3E%3C/svg%3E"); }
+
+/* ---------- menu du casino, en dessous */
+#casino-nav { flex: none; min-height: 46px; padding: 0 clamp(6px, 1.2vw, 14px); overflow-x: auto; scrollbar-width: none; background: rgba(5, 18, 13, .78); box-shadow: inset 0 -1px 0 var(--line); }
+#casino-nav[hidden] { display: none; }
+#casino-nav a { padding: 0 14px; font-size: 19px; }
+#casino-nav a.on { box-shadow: inset 0 -3px 0 var(--acc); }
+
+/* ---------- Guessr : la barre reste en haut, disparaît en partie */
+.hub-top { position: sticky; top: 0; z-index: 6; min-height: 64px; }
+#geo-view.playing .hub-top { display: none; }
+
+/* ---------- accueil */
+.hub { max-width: 1320px; margin: 0 auto; padding: clamp(6px, 1.6vw, 22px) 0 12px; }
+.hub-head small { font: 600 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--acc); }
+.hub-head h1 { margin: 8px 0 10px; font: 900 clamp(52px, 6.6vw, 100px)/.88 var(--display); text-transform: uppercase; color: #fff; }
+.hub-head p { margin: 0; max-width: 58ch; color: var(--ash); }
+
+.hub-todo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 22px 0 16px; min-height: 58px; padding: 8px 8px 8px 16px; background: rgba(5, 18, 13, .62); box-shadow: inset 0 0 0 1px var(--line); clip-path: var(--cut); }
+.hub-todo > b { margin-right: 6px; font: 600 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--acc); }
+.hub-todo a { display: flex; flex-direction: column; gap: 3px; padding: 8px 16px; color: var(--on-acc); background: var(--gold-metal); transition: transform .15s var(--snap), filter .15s; }
+.hub-todo a:hover { transform: translateY(-2px); filter: brightness(1.06); }
+.hub-todo a span { font: 900 21px/1 var(--display); text-transform: uppercase; }
+.hub-todo a small { font: 600 10px var(--mono); text-transform: uppercase; opacity: .75; }
+.hub-next { font: 500 12px var(--mono); color: var(--ash); }
+
+.hub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.hub-card { --hc-bg: #063a29; --hc-acc: var(--gold-metal); --hc-ink: var(--on-acc);
+  position: relative; display: flex; flex-direction: column; gap: 18px; min-height: 430px; padding: 26px 26px 0; overflow: hidden; color: #fff; background: var(--hc-bg); clip-path: var(--cut);
+  transition: transform .22s var(--snap), filter .22s; }
+.hub-card:hover { transform: translateY(-5px); filter: brightness(1.08); }
+.hub-card:focus-visible { outline: 3px solid var(--acc); outline-offset: -3px; }
+.hc-casino { --hc-bg: radial-gradient(circle at 78% 18%, #14905f 0%, #0a5c3f 42%, #052a1e 100%); }
+.hc-cards { --hc-bg: radial-gradient(circle at 78% 18%, #6a3fb0 0%, #33205a 46%, #140c25 100%); --hc-acc: #c79bff; --hc-ink: #160b26; }
+.hc-geo { --hc-bg: radial-gradient(circle at 78% 18%, #2a7cbf 0%, #154466 46%, #08192a 100%); --hc-acc: #8ce7b2; --hc-ink: #06281a; }
+.hc-art { width: 128px; height: 128px; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .4)); transition: transform .35s var(--spring); }
+.hc-art svg { display: block; width: 100%; height: 100%; }
+.hub-card:hover .hc-art { transform: rotate(-6deg) scale(1.07); }
+.hc-txt { flex: 1; }
+.hc-txt small { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
+.hc-txt h2 { margin: 6px 0 10px; font: 900 clamp(40px, 3.6vw, 56px)/.9 var(--display); text-transform: uppercase; }
+.hc-txt p { margin: 0; max-width: 34ch; line-height: 1.45; color: rgba(255, 255, 255, .82); }
+.hc-fact { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .16); }
+.hc-fact dt { font: 600 11px var(--mono); text-transform: uppercase; color: rgba(255, 255, 255, .65); }
+.hc-fact dd { margin: 0; font: 900 28px/1 var(--display); text-transform: uppercase; }
+.hc-go { display: flex; align-items: center; justify-content: space-between; margin: 0 -26px; padding: 16px 26px; font: 900 26px/1 var(--display); text-transform: uppercase; color: var(--hc-ink); background: var(--hc-acc); }
+.hc-go::after { content: "→"; font-family: var(--font, sans-serif); transition: transform .22s var(--snap); }
+.hub-card:hover .hc-go::after { transform: translateX(6px); }
+.hub-recent { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+
+.enter .hub-card { animation: an-up-in .45s var(--snap) backwards; }
+.enter .hub-card:nth-child(2) { animation-delay: .06s; }
+.enter .hub-card:nth-child(3) { animation-delay: .12s; }
+
+@media (max-width: 1100px) {
+  .hub-grid { grid-template-columns: minmax(0, 1fr); }
+  .hub-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-areas: "art txt" "fact fact" "go go"; min-height: 0; gap: 14px 18px; }
+  .hc-art { grid-area: art; width: 96px; height: 96px; }
+  .hc-txt { grid-area: txt; }
+  .hc-fact { grid-area: fact; }
+  .hc-go { grid-area: go; }
+}
+@media (max-width: 760px) {
+  .club-top { gap: 6px; }
+  .hub-switch { gap: 0; }
+  .hub-switch a { flex: 1 1 auto; justify-content: center; gap: 4px; padding: 0 5px; font-size: 18px; }
+  .hub-switch a:first-child { flex: 0 0 38px; padding: 0; font-size: 0; }
+  .hub-switch a:first-child::before { content: ""; width: 18px; height: 18px; background: currentColor; -webkit-mask: var(--grid-ico) center / contain no-repeat; mask: var(--grid-ico) center / contain no-repeat; }
+  .club-top .balance { margin: 9px 8px 9px 0; padding: 0 9px; font-size: 20px; }
+  .hub-top { min-height: 52px; }
+  #casino-nav { min-height: 40px; }
+  #casino-nav a { font-size: 17px; padding: 0 10px; }
+  .hub-card { grid-template-columns: 64px minmax(0, 1fr); padding: 18px 18px 0; }
+  .hc-art { width: 64px; height: 64px; }
+  .hc-txt h2 { font-size: 36px; }
+  .hc-go { margin: 0 -18px; padding: 14px 18px; font-size: 22px; }
+  .hub-todo { padding-left: 12px; }
+}

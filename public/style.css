@@ -262,7 +262,7 @@ img { -webkit-user-drag: none; }
   .topbar .wordmark { flex: none; width: 58px; height: 56px; }
   .topbar .wordmark::before { width: 56px; height: 56px; }
   .tabs-main { flex-direction: row; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
-  .tabs-main a { flex: 0 0 auto; padding: 0 12px; writing-mode: horizontal-tb; transform: none; font-size: 25px; border-top: 0; border-left: 2px solid var(--on-acc); gap: 6px; }
+  .tabs-main a { flex: 1 0 auto; padding: 0 10px; writing-mode: horizontal-tb; transform: none; font-size: 23px; border-top: 0; border-left: 2px solid var(--on-acc); gap: 6px; }
   .tabs-main a:first-child { border-left: 0; }
   .tabs-main a::before { display: none; }
   .top-me { width: 56px; height: 56px; }
