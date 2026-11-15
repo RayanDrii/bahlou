@@ -300,6 +300,7 @@ const Club = (() => {
   /* ---------- accueil de l'onglet Jeux : les trois espaces, ce qui attend, et les derniers jeux */
   const HUB_ART = {
     cards: '<rect x="14" y="40" width="68" height="42" rx="4" fill="#3b2a12"/><rect x="14" y="40" width="68" height="10" fill="#e9bf5a"/><rect x="42" y="40" width="12" height="42" fill="#e9bf5a"/><g transform="rotate(-12 38 30)"><rect x="24" y="8" width="26" height="36" rx="3" fill="#f2efe6"/><rect x="28" y="12" width="18" height="18" rx="2" fill="#c79bff"/></g><g transform="rotate(10 60 28)"><rect x="48" y="6" width="26" height="36" rx="3" fill="#f2efe6"/><rect x="52" y="10" width="18" height="18" rx="2" fill="#ff4a1f"/></g>',
+    menteur: '<g transform="rotate(-14 40 56)"><rect x="16" y="22" width="40" height="56" rx="5" fill="#f2efe6"/><text x="36" y="58" text-anchor="middle" font-family="Big Shoulders, Impact, sans-serif" font-weight="700" font-size="30" fill="#c8102e">5</text></g><g transform="rotate(12 60 52)"><rect x="40" y="18" width="40" height="56" rx="5" fill="#7d0a1c" stroke="#e9bf5a" stroke-width="2"/><path d="M60 32 70 46 60 60 50 46Z" fill="#e9bf5a"/></g><circle cx="70" cy="74" r="16" fill="#e8352b"/><text x="70" y="82" text-anchor="middle" font-family="Big Shoulders, Impact, sans-serif" font-weight="900" font-size="24" fill="#fff">!</text>',
     geo: '<circle cx="48" cy="50" r="34" fill="#4aa8ff"/><path d="M26 34c8-2 12 4 18 2s6-10 14-8 10 10 6 16-12 4-14 10 4 12-2 16-12-2-14-10-12-6-12-14 0-10 4-12Z" fill="#8ce7b2"/><path d="M48 6c-9 0-16 7-16 16 0 12 16 28 16 28s16-16 16-28c0-9-7-16-16-16Z" fill="#ff4a1f"/><circle cx="48" cy="22" r="6" fill="#f2efe6"/>',
   };
   function renderHub(root, ctx) {
@@ -318,6 +319,9 @@ const Club = (() => {
         <a class="hub-card hc-geo" href="#/geo"><span class="hc-art"><svg viewBox="0 0 96 96" aria-hidden="true">${HUB_ART.geo}</svg></span>
           <div class="hc-txt"><small>Street View</small><h2>Bahlou Guessr</h2><p>Lâché quelque part sur Terre : trouve où tu es, seul ou entre potes.</p></div>
           <dl class="hc-fact"><dt>Parties</dt><dd>Solo ou en salon</dd></dl><span class="hc-go">Partir</span></a>
+        <a class="hub-card hc-menteur" href="#/menteur"><span class="hc-art"><svg viewBox="0 0 96 96" aria-hidden="true">${HUB_ART.menteur}</svg></span>
+          <div class="hc-txt"><small>Cartes · 2 à 6</small><h2>Le Menteur</h2><p>Annonce, bluffe, et crie « Menteur ! » au bon moment.</p></div>
+          <dl class="hc-fact"><dt>Parties</dt><dd>Robots ou potes</dd></dl><span class="hc-go">S’asseoir</span></a>
       </section>
       ${recent.length ? `<h2 class="lb-sec">Reprendre</h2><section class="tiles hub-recent">${recent.map(tileHtml).join('')}</section>` : ''}
     </div>`;
@@ -462,28 +466,32 @@ const Club = (() => {
     const h = location.hash.replace(/^#\/?/, '') || 'chat';
     const [page, sub] = h.split('/');
     const inGeo = page === 'geo';
+    const inMenteur = page === 'menteur';
     const inWork = page === 'work';
     const inAdmin = page === 'admin';
-    const inClub = page !== 'chat' && !inWork && !inAdmin && !inGeo;
+    const inClub = page !== 'chat' && !inWork && !inAdmin && !inGeo && !inMenteur;
     const inCasino = inClub && page !== 'jeux' && page !== 'cards';
-    $('#chat-view').hidden = inClub || inWork || inAdmin || inGeo;
+    $('#chat-view').hidden = inClub || inWork || inAdmin || inGeo || inMenteur;
     $('#geo-view').hidden = !inGeo;
+    $('#menteur-view').hidden = !inMenteur;
     $('#club').hidden = !inClub;
     $('#work').hidden = !inWork;
     $('#admin-view').hidden = !inAdmin;
-    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin || inGeo);
-    document.documentElement.dataset.page = inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? 'club' : 'chat';
-    document.documentElement.dataset.zone = inGeo || inClub ? 'jeux' : '';
-    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inGeo || inClub ? 'jeux' : inAdmin ? 'admin' : inWork ? 'work' : 'chat')));
-    const hub = inGeo ? 'geo' : page === 'jeux' || page === 'cards' ? page : 'club';
+    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin || inGeo || inMenteur);
+    document.documentElement.dataset.page = inMenteur ? 'menteur' : inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? 'club' : 'chat';
+    document.documentElement.dataset.zone = inGeo || inClub || inMenteur ? 'jeux' : '';
+    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inGeo || inClub || inMenteur ? 'jeux' : inAdmin ? 'admin' : inWork ? 'work' : 'chat')));
+    const hub = inMenteur ? 'menteur' : inGeo ? 'geo' : page === 'jeux' || page === 'cards' ? page : 'club';
     document.querySelectorAll('.hub-switch a').forEach((a) => { const on = a.dataset.hub === hub; a.classList.toggle('on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     $('#casino-nav').hidden = !inCasino;
     Geo.stop();
+    Menteur.stop();
     Work.stop();
     Admin.stop();
     document.querySelectorAll('.subnav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === page));
     current?.stop(); current = null;
     if (inGeo) { Geo.open(sub); return; }
+    if (inMenteur) { Menteur.open(sub); return; }
     if (inWork) { Work.open(); return; }
     if (inAdmin) { Admin.open(); return; }
     if (!inClub) { renderMessages('bottom'); markSeen(); return; }
@@ -536,7 +544,7 @@ const Club = (() => {
     try {
       const { v } = await api('GET', '/api/version');
       if (build === null) build = v;
-      else if (v !== build && !Call.active() && !/^#\/admin/.test(location.hash) && !/^#\/geo/.test(location.hash) && !/^#\/club\/./.test(location.hash) && !$('#input').value.trim()) location.reload();
+      else if (v !== build && !Call.active() && !/^#\/admin/.test(location.hash) && !/^#\/geo/.test(location.hash) && !/^#\/menteur/.test(location.hash) && !/^#\/club\/./.test(location.hash) && !$('#input').value.trim()) location.reload();
     } catch {}
   }
   function bind(es) {

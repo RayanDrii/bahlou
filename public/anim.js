@@ -3,7 +3,7 @@
 const Anim = (() => {
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const WORD = { chat: 'Salon', jeux: 'Jeux', work: 'Travail', admin: 'Admin' };
-  const BOX = { chat: '#chat-view', club: '#club', work: '#work', admin: '#admin-view', geo: '#geo-view' };
+  const BOX = { chat: '#chat-view', club: '#club', work: '#work', admin: '#admin-view', geo: '#geo-view', menteur: '#menteur-view' };
   const root = document.documentElement;
   const lite = () => root.classList.contains('lite');
 
@@ -44,8 +44,8 @@ const Anim = (() => {
 
   function where() {
     const [page, sub] = (location.hash.replace(/^#\/?/, '') || 'chat').split('/');
-    const section = ['chat', 'work', 'admin', 'geo'].includes(page) ? page : 'club';
-    return { section, tab: section === 'club' || section === 'geo' ? 'jeux' : section, game: page === 'club' && sub ? sub : '' };
+    const section = ['chat', 'work', 'admin', 'geo', 'menteur'].includes(page) ? page : 'club';
+    return { section, tab: ['club', 'geo', 'menteur'].includes(section) ? 'jeux' : section, game: page === 'club' && sub ? sub : '' };
   }
   function enter(section) {
     const el = document.querySelector(BOX[section]);

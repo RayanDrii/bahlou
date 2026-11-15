@@ -41,7 +41,7 @@
 .hub-todo a small { font: 600 10px var(--mono); text-transform: uppercase; opacity: .75; }
 .hub-next { font: 500 12px var(--mono); color: var(--ash); }
 
-.hub-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.hub-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .hub-card { --hc-bg: #063a29; --hc-acc: var(--gold-metal); --hc-ink: var(--on-acc);
   position: relative; display: flex; flex-direction: column; gap: 18px; min-height: 430px; padding: 26px 26px 0; overflow: hidden; color: #fff; background: var(--hc-bg); clip-path: var(--cut);
   transition: transform .22s var(--snap), filter .22s; }
@@ -49,17 +49,18 @@
 .hub-card:focus-visible { outline: 3px solid var(--acc); outline-offset: -3px; }
 .hc-casino { --hc-bg: radial-gradient(circle at 78% 18%, #14905f 0%, #0a5c3f 42%, #052a1e 100%); }
 .hc-cards { --hc-bg: radial-gradient(circle at 78% 18%, #6a3fb0 0%, #33205a 46%, #140c25 100%); --hc-acc: #c79bff; --hc-ink: #160b26; }
+.hc-menteur { --hc-bg: radial-gradient(circle at 78% 18%, #b0283f 0%, #6a1226 46%, #26060f 100%); --hc-acc: #ffcf6e; --hc-ink: #2a0710; }
 .hc-geo { --hc-bg: radial-gradient(circle at 78% 18%, #2a7cbf 0%, #154466 46%, #08192a 100%); --hc-acc: #8ce7b2; --hc-ink: #06281a; }
 .hc-art { width: 128px; height: 128px; filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .4)); transition: transform .35s var(--spring); }
 .hc-art svg { display: block; width: 100%; height: 100%; }
 .hub-card:hover .hc-art { transform: rotate(-6deg) scale(1.07); }
 .hc-txt { flex: 1; }
 .hc-txt small { font: 600 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .7); }
-.hc-txt h2 { margin: 6px 0 10px; font: 900 clamp(40px, 3.6vw, 56px)/.9 var(--display); text-transform: uppercase; }
+.hc-txt h2 { margin: 6px 0 10px; font: 900 clamp(34px, 2.7vw, 52px)/.9 var(--display); text-transform: uppercase; }
 .hc-txt p { margin: 0; max-width: 34ch; line-height: 1.45; color: rgba(255, 255, 255, .82); }
 .hc-fact { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, .16); }
 .hc-fact dt { font: 600 11px var(--mono); text-transform: uppercase; color: rgba(255, 255, 255, .65); }
-.hc-fact dd { margin: 0; font: 900 28px/1 var(--display); text-transform: uppercase; }
+.hc-fact dd { margin: 0; font: 900 22px/1 var(--display); text-align: right; text-transform: uppercase; }
 .hc-go { display: flex; align-items: center; justify-content: space-between; margin: 0 -26px; padding: 16px 26px; font: 900 26px/1 var(--display); text-transform: uppercase; color: var(--hc-ink); background: var(--hc-acc); }
 .hc-go::after { content: "→"; font-family: var(--font, sans-serif); transition: transform .22s var(--snap); }
 .hub-card:hover .hc-go::after { transform: translateX(6px); }
@@ -68,7 +69,12 @@
 .enter .hub-card { animation: an-up-in .45s var(--snap) backwards; }
 .enter .hub-card:nth-child(2) { animation-delay: .06s; }
 .enter .hub-card:nth-child(3) { animation-delay: .12s; }
+.enter .hub-card:nth-child(4) { animation-delay: .18s; }
 
+@media (max-width: 1360px) {
+  .hub-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hub-card { min-height: 360px; }
+}
 @media (max-width: 1100px) {
   .hub-grid { grid-template-columns: minmax(0, 1fr); }
   .hub-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); grid-template-areas: "art txt" "fact fact" "go go"; min-height: 0; gap: 14px 18px; }
@@ -80,10 +86,10 @@
 @media (max-width: 760px) {
   .club-top { gap: 6px; }
   .hub-switch { gap: 0; }
-  .hub-switch a { flex: 1 1 auto; justify-content: center; gap: 4px; padding: 0 5px; font-size: 18px; }
-  .hub-switch a:first-child { flex: 0 0 38px; padding: 0; font-size: 0; }
+  .hub-switch a { flex: 1 1 auto; justify-content: center; gap: 3px; padding: 0 3px; font-size: 15px; }
+  .hub-switch a:first-child { flex: 0 0 34px; padding: 0; font-size: 0; }
   .hub-switch a:first-child::before { content: ""; width: 18px; height: 18px; background: currentColor; -webkit-mask: var(--grid-ico) center / contain no-repeat; mask: var(--grid-ico) center / contain no-repeat; }
-  .club-top .balance { margin: 9px 8px 9px 0; padding: 0 9px; font-size: 20px; }
+  .club-top .balance { margin: 9px 6px 9px 0; padding: 0 8px; font-size: 18px; }
   .hub-top { min-height: 52px; }
   #casino-nav { min-height: 40px; }
   #casino-nav a { font-size: 17px; padding: 0 10px; }

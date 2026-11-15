@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="/admin.css">
   <link rel="stylesheet" href="/geo.css">
   <link rel="stylesheet" href="/hub.css">
+  <link rel="stylesheet" href="/menteur.css">
 </head>
 <body>
   <!-- ===================================================== CONNEXION -->
@@ -94,6 +95,7 @@
         <a href="#/club" data-hub="club">Casino<span class="r-dot js-bonus-dot" hidden></span></a>
           <a href="#/cards" data-hub="cards">Caisses</a>
           <a href="#/geo" data-hub="geo">Guessr</a>
+          <a href="#/menteur" data-hub="menteur">Menteur</a>
         </nav>
         <span class="golden" id="ct-golden" hidden></span>
         <span class="ct-streak" id="ct-streak"></span>
@@ -118,10 +120,25 @@
           <a href="#/club" data-hub="club">Casino<span class="r-dot js-bonus-dot" hidden></span></a>
           <a href="#/cards" data-hub="cards">Caisses</a>
           <a href="#/geo" data-hub="geo">Guessr</a>
+          <a href="#/menteur" data-hub="menteur">Menteur</a>
         </nav>
         <div class="balance"><i class="coin"></i><span class="js-coins">0</span></div>
       </header>
       <div class="geo-body" id="geo-body"></div>
+    </main>
+
+    <main class="menteur" id="menteur-view" hidden>
+      <header class="club-top hub-top">
+        <nav class="hub-switch" aria-label="Jeux">
+          <a href="#/jeux" data-hub="jeux" aria-label="Accueil des jeux">Accueil</a>
+          <a href="#/club" data-hub="club">Casino<span class="r-dot js-bonus-dot" hidden></span></a>
+          <a href="#/cards" data-hub="cards">Caisses</a>
+          <a href="#/geo" data-hub="geo">Guessr</a>
+          <a href="#/menteur" data-hub="menteur">Menteur</a>
+        </nav>
+        <div class="balance"><i class="coin"></i><span class="js-coins">0</span></div>
+      </header>
+      <div class="menteur-body" id="menteur-body"></div>
     </main>
 
     <main class="admin" id="admin-view" hidden><div class="work-body" id="admin-body"></div></main>
@@ -210,6 +227,7 @@
   <script src="/club.js"></script>
   <script src="/club-games.js"></script>
   <script src="/club-extra.js"></script>
+  <script src="/menteur.js"></script>
   <script src="/work.js"></script>
   <script src="/call.js"></script>
   <script src="/admin.js"></script>

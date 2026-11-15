@@ -298,6 +298,7 @@ function connect() {
   });
   Club.bind(es);
   Geo.bind(es);
+  Menteur.bind(es);
   Call.bind(es);
   es.addEventListener('poll', (e) => { const d = JSON.parse(e.data); const m = state.messages.find((x) => x.id === d.id); if (m) { m.poll = d.poll; renderMessages('keep'); } });
   es.addEventListener('message', (e) => onMessage(JSON.parse(e.data)));
@@ -322,6 +323,7 @@ async function resync() {
     await loadMessages();
     await Club.refresh();
     Geo.refresh();
+    Menteur.refresh();
     Call.refresh();
   } catch {}
 }
