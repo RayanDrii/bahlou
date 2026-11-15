@@ -66,9 +66,9 @@ test('client: navigation during pending panorama preparation never starts a roun
 test('client: pending state refresh cannot resurrect a room after leaving', async () => {
   const s = setup(); await s.geo.open();
   const refresh = s.geo.refresh(); await s.click('leave');
-  assert.match(s.root.innerHTML, /Où es-tu/);
+  assert.match(s.root.innerHTML, /Bahlou Guessr/);
   s.pendingRefresh.resolve({ room: s.waiting, serverNow: Date.now() }); await refresh;
-  assert.match(s.root.innerHTML, /Où es-tu/);
+  assert.match(s.root.innerHTML, /Bahlou Guessr/);
   assert.doesNotMatch(s.root.innerHTML, /Préparez le voyage/);
 });
 

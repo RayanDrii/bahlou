@@ -70,7 +70,7 @@ const Geo = (() => {
   }
   function renderHome() {
     root().innerHTML = `<section class="gh">
-      <div class="gh-hero"><small>Bahlou Geo</small><h1>Où es-tu ?</h1><p>Tu es lâché quelque part sur Terre. Explore les rues, repère les panneaux, la végétation, le sens de circulation. Puis place ton point sur la carte.</p></div>
+      <div class="gh-hero"><small>Où es-tu ?</small><h1>Bahlou Guessr</h1><p>Tu es lâché quelque part sur Terre. Explore les rues, repère les panneaux, la végétation, le sens de circulation. Puis place ton point sur la carte.</p></div>
       <div class="gh-cards">
         <article class="gh-card"><h2>Jouer seul</h2><p>Une partie rapide pour t'entraîner, à ton rythme.</p>${button('solo', 'Partir maintenant', !config?.configured)}</article>
         <article class="gh-card"><h2>Avec tes potes</h2><p>Crée un salon, partage le lien, et que le meilleur explorateur gagne.</p>${button('create', 'Créer un salon', !config?.configured)}
