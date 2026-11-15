@@ -16,16 +16,19 @@ function setup(apiKey = 'test-key') {
     await routes[`${method} /api/geo/${action}`]({ body }, res, user, new URL('http://local/'));
     return res;
   }
+  const locationsFor = (seeds, n = 7) => seeds.points.slice(0, n).map((c, index) => ({ index, panoId: `pano-${index}`, lat: c.lat, lng: c.lng }));
+  async function prepare(n) {
+    const seeds = (await call('state', 'alice', {}, 'GET')).data.room.seeds;
+    return call('prepare', 'alice', { seedVersion: seeds.version, locations: locationsFor(seeds, n) });
+  }
   async function room() {
     const a = await call('create');
     const code = a.data.room.code;
     await call('join', 'bob', { code });
-    const cfg = (await call('config', 'alice', {}, 'GET')).data;
-    const locations = cfg.candidates.slice(0, 7).map((c, index) => ({ index, panoId: `pano-${index}`, lat: c.lat, lng: c.lng }));
-    await call('prepare', 'alice', { locations });
+    await prepare();
     return code;
   }
-  return { call, room, events, tick(ms) { time += ms; geo.sweep(); } };
+  return { call, room, prepare, locationsFor, events, tick(ms) { time += ms; geo.sweep(); } };
 }
 
 test('distance and score use great-circle distance, including antimeridian', () => {
@@ -39,7 +42,7 @@ test('every route authenticates; missing key disables game creation', async () =
   const s = setup('');
   assert.equal((await s.call('config', null, {}, 'GET')).status, 401);
   assert.equal((await s.call('state', null, {}, 'GET')).status, 401);
-  for (const a of ['create', 'join', 'prepare', 'start', 'guess', 'next', 'rematch', 'leave']) assert.equal((await s.call(a, null)).status, 401);
+  for (const a of ['create', 'join', 'settings', 'prepare', 'start', 'hint', 'guess', 'next', 'rematch', 'leave']) assert.equal((await s.call(a, null)).status, 401);
   assert.equal((await s.call('config', 'alice', {}, 'GET')).data.configured, false);
   assert.equal((await s.call('create')).status, 503);
 });
@@ -60,11 +63,16 @@ test('private membership, join normalization, player limits and owner actions', 
 
 test('preparation validates coordinates, panorama identities and host ownership', async () => {
   const s = setup();
-  await s.call('create');
-  assert.equal((await s.call('prepare', 'bob', { locations: [] })).status, 404);
-  assert.equal((await s.call('prepare', 'alice', { locations: [] })).status, 400);
-  assert.equal((await s.call('prepare', 'alice', { locations: Array(5).fill({ index: 0, panoId: 'same', lat: 0, lng: 0 }) })).status, 400);
+  const { seeds } = (await s.call('create')).data.room;
+  const seedVersion = seeds.version, first = seeds.points[0];
+  assert.equal((await s.call('prepare', 'bob', { seedVersion, locations: [] })).status, 404);
+  assert.equal((await s.call('prepare', 'alice', { seedVersion, locations: [] })).status, 400);
+  assert.equal((await s.call('prepare', 'alice', { seedVersion: seedVersion + 1, locations: s.locationsFor(seeds) })).status, 409);
+  assert.equal((await s.call('prepare', 'alice', { seedVersion, locations: Array(5).fill({ index: 0, panoId: 'same', lat: first.lat, lng: first.lng }) })).status, 400);
+  const far = s.locationsFor(seeds).map((l, i) => (i === 0 ? { ...l, lat: Math.max(-89, Math.min(89, l.lat + 2)) } : l));
+  assert.equal((await s.call('prepare', 'alice', { seedVersion, locations: far })).status, 400, 'a panorama far from its seed is refused');
   assert.equal((await s.call('prepare', 'alice', null)).status, 400);
+  assert.equal((await s.call('state', 'bob', {}, 'GET')).data.room, null);
 });
 
 test('same start, hidden future locations and other answers, private broadcasts', async () => {
@@ -151,10 +159,51 @@ test('idle rooms expire and repeated creation is bounded', async () => {
 
 test('real Street View panorama ids may contain dots and are accepted', async () => {
   const s = setup();
-  const code = (await s.call('create')).data.room.code;
-  await s.call('join', 'bob', { code });
-  const cfg = (await s.call('config', 'alice', {}, 'GET')).data;
-  const locations = cfg.candidates.slice(0, 5).map((c, index) => ({ index, panoId: index === 2 ? 'CAoSLEFGMVFpcE.4vX_9-q' : `pano-${index}`, lat: c.lat, lng: c.lng }));
-  assert.equal((await s.call('prepare', 'alice', { locations })).status, 200);
-  assert.equal((await s.call('prepare', 'alice', { locations: locations.map((l, i) => (i === 1 ? { ...l, panoId: 'bad id<script>' } : l)) })).status, 400);
+  const { seeds } = (await s.call('create')).data.room;
+  const locations = s.locationsFor(seeds, 5).map((l, i) => (i === 2 ? { ...l, panoId: 'CAoSLEFGMVFpcE.4vX_9-q' } : l));
+  assert.equal((await s.call('prepare', 'alice', { seedVersion: seeds.version, locations })).status, 200);
+  assert.equal((await s.call('prepare', 'alice', { seedVersion: seeds.version, locations: locations.map((l, i) => (i === 1 ? { ...l, panoId: 'bad id<script>' } : l)) })).status, 400);
+});
+
+test('solo play: one player can prepare, start and finish a round', async () => {
+  const s = setup();
+  await s.call('create'); await s.prepare();
+  const r = (await s.call('start')).data.room;
+  assert.equal(r.phase, 'playing');
+  const done = (await s.call('guess', 'alice', { roundId: r.round.id, lat: 0, lng: 0 })).data.room;
+  assert.equal(done.phase, 'results');
+  assert.equal(typeof done.result.location.zone, 'string');
+});
+
+test('settings: host only, validated, zone change draws new seeds and unlimited time has no deadline', async () => {
+  const s = setup();
+  const code = (await s.call('create')).data.room.code; await s.call('join', 'bob', { code });
+  assert.equal((await s.call('settings', 'bob', { rounds: 3 })).status, 403);
+  for (const bad of [{ mode: 'mars' }, { rounds: 7 }, { seconds: 45 }, { move: 'oui' }]) assert.equal((await s.call('settings', 'alice', bad)).status, 400);
+  const before = (await s.call('state', 'alice', {}, 'GET')).data.room.seeds.version;
+  let r = (await s.call('settings', 'alice', { mode: 'france', rounds: 3, seconds: 0, move: false })).data.room;
+  assert.deepEqual(r.settings, { mode: 'france', rounds: 3, seconds: 0, move: false });
+  assert.notEqual(r.seeds.version, before);
+  assert.ok(r.seeds.points.every(p => p.lat > 42 && p.lat < 51 && p.lng > -5 && p.lng < 8), 'France seeds stay in France');
+  assert.equal((await s.call('state', 'bob', {}, 'GET')).data.room.seeds, null, 'only the host sees the seeds');
+  await s.prepare(3);
+  r = (await s.call('start')).data.room;
+  assert.equal(r.round.total, 3); assert.equal(r.round.deadline, null);
+  s.tick(30 * 60_000); // bien au-delà de 180 s : sans limite de temps, la manche continue
+  assert.equal((await s.call('state', 'alice', {}, 'GET')).data.room.phase, 'playing');
+  assert.equal((await s.call('settings', 'alice', { rounds: 5 })).status, 409);
+});
+
+test('hint reveals the continent to that player only and costs a quarter of the points', async () => {
+  const s = setup(); await s.room();
+  const r = (await s.call('start')).data.room;
+  const hinted = (await s.call('hint', 'alice', { roundId: r.round.id })).data.room;
+  assert.equal(typeof hinted.round.hint, 'string');
+  assert.equal((await s.call('state', 'bob', {}, 'GET')).data.room.round.hint, null);
+  await s.call('guess', 'alice', { roundId: r.round.id, lat: 0, lng: 0 });
+  assert.equal((await s.call('hint', 'alice', { roundId: r.round.id })).status, 409);
+  const done = (await s.call('guess', 'bob', { roundId: r.round.id, lat: 0, lng: 0 })).data.room;
+  const a = done.result.answers.find(x => x.name === 'alice'), b = done.result.answers.find(x => x.name === 'bob');
+  assert.equal(a.hinted, true); assert.equal(b.hinted, false);
+  assert.equal(a.points, Math.round(b.points * 0.75));
 });

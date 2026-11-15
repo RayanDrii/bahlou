@@ -43,8 +43,9 @@ test('HTTP: integrated navigation, authenticated rooms and a complete two-player
   assert.equal((await request('/api/geo/state', eve)).data.room, null);
   await request('/api/geo/join', b, { code: r.code });
   assert.equal((await request('/api/geo/start', b, {})).status, 403);
-  const locations = config.candidates.slice(0, 6).map((p, index) => ({ ...p, index, panoId: `test-${index}` }));
-  assert.equal((await request('/api/geo/prepare', a, { locations })).status, 200);
+  const seeds = (await request('/api/geo/state', a)).data.room.seeds;
+  const locations = seeds.points.slice(0, 6).map((p, index) => ({ ...p, index, panoId: `test-${index}` }));
+  assert.equal((await request('/api/geo/prepare', a, { seedVersion: seeds.version, locations })).status, 200);
   r = (await request('/api/geo/start', a, {})).data.room;
   for (let i = 0; i < 5; i++) {
     const roundId = r.round.id;

@@ -21,24 +21,29 @@ class Element {
     }
   }
   get innerHTML() { return this.html; }
-  querySelector(selector) { return this.nodes?.get(selector.slice(1)) || null; }
+  querySelector(selector) {
+    const action = /^\[data-geo-action=(\w+)\]$/.exec(selector)?.[1];
+    if (action) return (this.actions || []).find(b => b.dataset.geoAction === action) || null;
+    return this.nodes?.get(selector.slice(1)) || null;
+  }
   querySelectorAll() { return this.actions || []; }
   addEventListener(name, fn) { this.listeners[name] = fn; }
   setAttribute() {}
 }
-function setup() {
+function setup(fromHome = false) {
   const root = new Element(), requests = [], pendingPrepare = deferred(), pendingRefresh = deferred();
   let stateRequests = 0;
-  const waiting = { code: 'ABC234', host: 'alice', phase: 'waiting', version: 1, players: [{ name: 'alice', score: 0 }, { name: 'bob', score: 0 }], round: null, result: null, history: [], preparedCount: 0 };
-  const google = { maps: { importLibrary: async () => ({}), StreetViewSource: { OUTDOOR: 'outdoor' }, StreetViewService: class {
-    async getPanorama({ location }) { return { data: { location: { pano: `pano-${location.index}`, latLng: { toJSON: () => ({ lat: location.lat, lng: location.lng }) } } } }; }
+  const waiting = { code: 'ABC234', host: 'alice', phase: 'waiting', version: 1, players: [{ name: 'alice', score: 0 }, { name: 'bob', score: 0 }], round: null, result: null, history: [], preparedCount: 0, settings: { mode: 'world', rounds: 5, seconds: 90, move: true }, modeLabel: 'Monde entier', seeds: { version: 1, points: Array.from({ length: 8 }, (_, i) => ({ lat: i, lng: i })) } };
+  const google = { maps: { importLibrary: async () => ({}), StreetViewSource: { OUTDOOR: 'outdoor' }, StreetViewPreference: { NEAREST: 'nearest' }, StreetViewService: class {
+    async getPanorama({ location }) { return { data: { links: [{}], location: { pano: `pano-${location.lat}`, latLng: { toJSON: () => ({ lat: location.lat, lng: location.lng }) } } } }; }
   } } };
   const context = vm.createContext({ document: { querySelector: () => root }, google, window: { google }, state: { me: 'alice' }, URL, URLSearchParams, Date, Math, Promise,
     setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
+    addEventListener() {}, removeEventListener() {}, requestAnimationFrame: () => 1, cancelAnimationFrame() {}, performance: { now: () => 0 },
     api: async (_method, url) => {
       requests.push(url);
-      if (url.endsWith('/config')) return { configured: true, apiKey: 'fixture', candidates: Array.from({ length: 8 }, (_, i) => ({ lat: i, lng: i })) };
-      if (url.endsWith('/state')) return ++stateRequests === 1 ? { room: waiting, serverNow: Date.now() } : pendingRefresh.promise;
+      if (url.endsWith('/config')) return { configured: true, apiKey: 'fixture', seedRadiusKm: 50, hintFactor: 0.75, modes: [{ id: 'world', label: 'Monde entier' }], rounds: [3, 5, 10], times: [0, 60, 90], defaults: {} };
+      if (url.endsWith('/state')) return ++stateRequests === 1 ? { room: fromHome ? null : waiting, serverNow: Date.now() } : pendingRefresh.promise;
       if (url.endsWith('/prepare')) return pendingPrepare.promise;
       if (url.endsWith('/leave')) return { room: null, serverNow: Date.now() };
       return { room: waiting, serverNow: Date.now() };
@@ -50,10 +55,10 @@ function setup() {
 }
 
 test('client: navigation during pending panorama preparation never starts a round', async () => {
-  const s = setup(); await s.geo.open(); await s.click('start');
+  const s = setup(true); await s.geo.open(); await s.click('solo');
   for (let i = 0; i < 10 && !s.requests.includes('/api/geo/prepare'); i++) await flush();
   assert.ok(s.requests.includes('/api/geo/prepare'));
-  s.geo.stop(); s.pendingPrepare.resolve({ room: s.waiting, serverNow: Date.now() });
+  s.geo.stop(); s.pendingPrepare.resolve({ room: { ...s.waiting, version: 2, preparedCount: 7 }, serverNow: Date.now() });
   await flush(); await flush();
   assert.ok(!s.requests.includes('/api/geo/start'), 'Leaving Geo must cancel the pending start');
 });
@@ -61,8 +66,19 @@ test('client: navigation during pending panorama preparation never starts a roun
 test('client: pending state refresh cannot resurrect a room after leaving', async () => {
   const s = setup(); await s.geo.open();
   const refresh = s.geo.refresh(); await s.click('leave');
-  assert.match(s.root.innerHTML, /Le monde vous attend/);
+  assert.match(s.root.innerHTML, /Où es-tu/);
   s.pendingRefresh.resolve({ room: s.waiting, serverNow: Date.now() }); await refresh;
-  assert.match(s.root.innerHTML, /Le monde vous attend/);
-  assert.doesNotMatch(s.root.innerHTML, /On part où/);
+  assert.match(s.root.innerHTML, /Où es-tu/);
+  assert.doesNotMatch(s.root.innerHTML, /Préparez le voyage/);
+});
+
+test('client: the host can start once enough places are prepared', async () => {
+  const s = setup(); await s.geo.open();
+  for (let i = 0; i < 10 && !s.requests.includes('/api/geo/prepare'); i++) await flush();
+  const start = () => s.root.actions.find(b => b.dataset.geoAction === 'start');
+  assert.equal(start().dataset.locked, 'true');
+  s.pendingPrepare.resolve({ room: { ...s.waiting, version: 2, preparedCount: 7 }, serverNow: Date.now() });
+  for (let i = 0; i < 5; i++) await flush();
+  assert.equal(start().dataset.locked, 'false');
+  assert.equal(start().disabled, false);
 });

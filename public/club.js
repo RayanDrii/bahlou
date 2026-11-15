@@ -424,27 +424,23 @@ const Club = (() => {
     const inGeo = page === 'geo';
     const inWork = page === 'work';
     const inAdmin = page === 'admin';
-    const inWords = page === 'words';
-    const inClub = page !== 'chat' && !inWork && !inAdmin && !inWords && !inGeo;
-    $('#chat-view').hidden = inClub || inWork || inAdmin || inWords || inGeo;
-    $('#words-view').hidden = !inWords;
+    const inClub = page !== 'chat' && !inWork && !inAdmin && !inGeo;
+    $('#chat-view').hidden = inClub || inWork || inAdmin || inGeo;
     $('#geo-view').hidden = !inGeo;
     $('#club').hidden = !inClub;
     $('#work').hidden = !inWork;
     $('#admin-view').hidden = !inAdmin;
-    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin || inWords || inGeo);
-    document.documentElement.dataset.page = inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inWords ? 'words' : inClub ? 'club' : 'chat';
-    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inWords ? 'words' : inClub ? (page === 'cards' ? 'cards' : 'club') : 'chat')));
+    $('#app').classList.toggle('in-club', inClub || inWork || inAdmin || inGeo);
+    document.documentElement.dataset.page = inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? 'club' : 'chat';
+    document.querySelectorAll('.tabs-main a').forEach((a) => a.classList.toggle('on', a.dataset.tab === (inGeo ? 'geo' : inAdmin ? 'admin' : inWork ? 'work' : inClub ? (page === 'cards' ? 'cards' : 'club') : 'chat')));
     Geo.stop();
     Work.stop();
     Admin.stop();
-    Words.stop();
     document.querySelectorAll('.subnav a').forEach((a) => a.classList.toggle('on', a.dataset.nav === page));
     current?.stop(); current = null;
     if (inGeo) { Geo.open(sub); return; }
     if (inWork) { Work.open(); return; }
     if (inAdmin) { Admin.open(); return; }
-    if (inWords) { Words.open(); return; }
     if (!inClub) { renderMessages('bottom'); markSeen(); return; }
     const body = $('#club-body'), ctx = makeCtx();
     current = ctx;

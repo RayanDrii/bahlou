@@ -408,7 +408,6 @@ const games = createGames({
 
 const geo = createGeo({ routes, send, readBody, broadcast });
 createWork({ routes, send, readBody, dataDir: DATA_DIR, games });
-require('./words')({ routes, send, readBody, db, save, games, postSystem });
 createCall({ routes, send, readBody, broadcast, postSystem });
 const admin = createAdmin({ routes, send, readBody, db, save, games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir: DATA_DIR });
 
