@@ -2,7 +2,7 @@
 /* Bahlou — animations de l'interface : changements de page, cartes qui suivent la souris, gains qui s'envolent. */
 const Anim = (() => {
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const WORD = { chat: 'Salon', club: 'Casino', cards: 'Caisses', geo: 'Geo', work: 'Travail', admin: 'Admin' };
+  const WORD = { chat: 'Salon', club: 'Casino', cards: 'Caisses', geo: 'Guessr', work: 'Travail', admin: 'Admin' };
   const BOX = { chat: '#chat-view', club: '#club', work: '#work', admin: '#admin-view', geo: '#geo-view' };
   const root = document.documentElement;
   const lite = () => root.classList.contains('lite');
