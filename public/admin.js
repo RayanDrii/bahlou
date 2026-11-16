@@ -26,7 +26,7 @@ const Admin = (() => {
     return `<article class="a-p ${p.banned ? 'off' : ''}" data-p="${esc(p.name)}">
       <div class="a-who"><span class="a-av"></span><div><b>${esc(p.name)}</b><small>${p.banned ? 'Suspendu' : p.online ? 'En ligne' : 'Hors ligne'} · Niv. ${p.level}${p.admin ? ' · Admin' : ''}</small></div></div>
       <div class="a-coins">${num(p.coins)}</div>
-      <div class="a-act"><input type="number" class="a-n" placeholder="Montant" min="1" aria-label="Montant pour ${esc(p.name)}"><button type="button" class="w-btn" data-a="plus">Donner</button><button type="button" class="w-btn" data-a="minus">Retirer</button><button type="button" class="w-btn" data-a="pass">Mot de passe</button>${p.admin ? '' : `<button type="button" class="w-btn ${p.banned ? '' : 'danger'}" data-a="ban">${p.banned ? 'Réactiver' : 'Suspendre'}</button>`}</div>
+      <div class="a-act"><input type="number" class="a-n" placeholder="Montant" min="1" aria-label="Montant pour ${esc(p.name)}"><button type="button" class="w-btn" data-a="plus">Donner</button><button type="button" class="w-btn" data-a="minus">Retirer</button><button type="button" class="w-btn" data-a="pass">Mot de passe</button>${p.admin || p.banned ? '' : '<button type="button" class="w-btn" data-a="take" title="Se connecter en tant que ce joueur (2 h max, sans son onglet Travail)">Prendre la main</button>'}${p.admin ? '' : `<button type="button" class="w-btn ${p.banned ? '' : 'danger'}" data-a="ban">${p.banned ? 'Réactiver' : 'Suspendre'}</button>`}</div>
       ${p.cosmetics.length ? `<div class="a-items">${p.cosmetics.map((c) => `<span class="a-item ${c.on ? 'on' : ''}"><small>${KIND[c.type] || ''}</small>${esc(c.name)}<button type="button" data-rm="${esc(c.id)}" aria-label="Retirer ${esc(c.name)} à ${esc(p.name)}">Retirer</button></span>`).join('')}</div>` : ''}
     </article>`;
   }
@@ -45,6 +45,11 @@ const Admin = (() => {
       el.querySelector('[data-a=pass]').onclick = (e) => armed(e.target, 'Confirmer', async () => {
         const r = await call('/api/admin/password', { name });
         if (r) showSecret(name, r.password);
+      });
+      const take = el.querySelector('[data-a=take]');
+      if (take) take.onclick = (e) => armed(e.target, 'Confirmer', async () => {
+        try { await api('POST', '/api/admin/impersonate', { name }); location.hash = '#/chat'; location.reload(); }
+        catch (err) { fail(err); }
       });
       el.querySelectorAll('[data-rm]').forEach((btn) => (btn.onclick = () => armed(btn, 'Confirmer', () => call('/api/admin/cosmetic', { name, id: btn.dataset.rm }, 'Objet retiré.'))));
       const ban = el.querySelector('[data-a=ban]');

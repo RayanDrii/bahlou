@@ -92,9 +92,10 @@ function parseCookies(req) {
   });
   return out;
 }
+const sessionOf = (req) => { const t = parseCookies(req).bahlou; return t ? db.sessions[t] : null; };
 function currentUser(req) {
-  const t = parseCookies(req).bahlou;
-  const s = t && db.sessions[t];
+  const s = sessionOf(req);
+  if (s && s.until && s.until < Date.now()) return null; // une prise de main expire d'elle-même
   return s && db.users[s.name] && !db.users[s.name].banned ? s.name : null;
 }
 function send(res, status, obj, headers = {}) {
@@ -240,9 +241,17 @@ const routes = {
   },
 
   'POST /api/logout': (req, res) => {
-    const t = parseCookies(req).bahlou;
+    const t = parseCookies(req).bahlou, s = t && db.sessions[t];
     if (t) { delete db.sessions[t]; save(); }
+    // fin d'une prise de main : l'admin retrouve son propre compte
+    if (s && s.by && s.back && db.sessions[s.back]) return send(res, 200, { ok: true, back: s.by }, { 'Set-Cookie': sessionCookie(req, s.back, 60 * 60 * 24 * 90) });
     send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(req, '', 0) });
+  },
+  'POST /api/takeovers/seen': (req, res, user) => {
+    if (!user) return send(res, 401, { error: 'non connecté' });
+    const s = sessionOf(req);
+    if (!s?.by && db.users[user]?.takeovers) { delete db.users[user].takeovers; save(); }
+    send(res, 200, { ok: true });
   },
 
   'GET /api/state': (req, res, user) => {
@@ -253,7 +262,9 @@ const routes = {
       if (list.length && canAccess(user, conv)) last[conv] = list[list.length - 1];
     }
     const alert = db.alert && Date.now() - db.alert.ts < 86400000 ? db.alert : null;
-    send(res, 200, { me: user, users: publicUsers(), last, admin: admin.isAdmin(user), alert });
+    const s = sessionOf(req);
+    const takeovers = !s?.by && db.users[user]?.takeovers?.length ? db.users[user].takeovers : null;
+    send(res, 200, { me: user, users: publicUsers(), last, admin: !s?.by && admin.isAdmin(user), alert, impersonatedBy: s?.by || null, impersonationEnds: s?.until || null, takeovers });
   },
 
   'GET /api/messages': (req, res, user, url) => {
@@ -411,7 +422,7 @@ const geo = createGeo({ routes, send, readBody, broadcast });
 const menteur = createMenteur({ routes, send, readBody, broadcast });
 createWork({ routes, send, readBody, dataDir: DATA_DIR, games });
 createCall({ routes, send, readBody, broadcast, postSystem });
-const admin = createAdmin({ routes, send, readBody, db, save, games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir: DATA_DIR });
+const admin = createAdmin({ routes, send, readBody, db, save, sessionOf, sessionCookie, parseCookies, games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir: DATA_DIR });
 
 // ---------------------------------------------------------------- fichiers statiques
 const MIME = {
@@ -511,6 +522,8 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && !(req.headers['content-type'] || '').includes('application/json')) {
     return send(res, 415, { error: 'JSON attendu' });
   }
+  // pendant une prise de main, l'onglet Travail (données Epitech, clés) du joueur reste privé
+  if (url.pathname.startsWith('/api/work') && sessionOf(req)?.by) return send(res, 403, { error: 'Pendant une prise de main, l’onglet Travail du joueur reste privé.' });
   try { await handler(req, res, currentUser(req), url); }
   catch (e) { if (!res.headersSent) send(res, 400, { error: e.message }); }
 });

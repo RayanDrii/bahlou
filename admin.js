@@ -8,7 +8,7 @@ const crypto = require('crypto');
 
 const MAX_COINS = 100_000_000;
 
-module.exports = function createAdmin({ routes, send, readBody, db, save, games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir }) {
+module.exports = function createAdmin({ routes, send, readBody, db, save, sessionOf = () => null, sessionCookie = () => '', parseCookies = () => ({}), games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir }) {
   const admins = new Set((process.env.BAHLOU_ADMIN || '').split(',').map((s) => s.trim()).filter(Boolean));
   const isAdmin = (user) => !!user && admins.has(user);
   const log = (by, action) => {
@@ -17,7 +17,8 @@ module.exports = function createAdmin({ routes, send, readBody, db, save, games,
     db.adminLog.length = Math.min(db.adminLog.length, 50);
     save();
   };
-  const only = (fn) => async (req, res, user, url) => (isAdmin(user) ? fn(req, res, user, url) : send(res, 403, { error: 'accès refusé' }));
+  // un admin qui a pris la main sur un compte n'a plus ses droits tant qu'il n'est pas revenu au sien
+  const only = (fn) => async (req, res, user, url) => (isAdmin(user) && !sessionOf(req)?.by ? fn(req, res, user, url) : send(res, 403, { error: 'accès refusé' }));
   const exists = (name) => typeof name === 'string' && Object.hasOwn(db.users, name);
   function endSessions(name) {
     for (const [t, s] of Object.entries(db.sessions)) if (s.name === name) delete db.sessions[t];
@@ -66,6 +67,24 @@ module.exports = function createAdmin({ routes, send, readBody, db, save, games,
     save();
     broadcast('users', publicUsers());
     send(res, 200, { ok: true });
+  });
+
+  // se connecter en tant qu'un joueur, deux heures au plus ; le joueur en est informé à sa prochaine visite
+  const TAKEOVER_MS = 2 * 60 * 60 * 1000;
+  routes['POST /api/admin/impersonate'] = only(async (req, res, user) => {
+    const { name } = await readBody(req);
+    if (!exists(name)) return send(res, 404, { error: 'Joueur inconnu.' });
+    if (name === user) return send(res, 400, { error: 'C’est déjà ton compte.' });
+    if (admins.has(name)) return send(res, 400, { error: 'Impossible de prendre la main sur un autre admin.' });
+    if (db.users[name].banned) return send(res, 400, { error: 'Ce compte est suspendu.' });
+    const back = parseCookies(req).bahlou;
+    const token = crypto.randomBytes(32).toString('hex');
+    const now = Date.now();
+    db.sessions[token] = { name, created: now, by: user, back, until: now + TAKEOVER_MS };
+    (db.users[name].takeovers ||= []).push({ by: user, ts: now });
+    db.users[name].takeovers = db.users[name].takeovers.slice(-10);
+    log(user, `Prise de main sur le compte de ${name}`);
+    send(res, 200, { ok: true, name }, { 'Set-Cookie': sessionCookie(req, token, TAKEOVER_MS / 1000) });
   });
 
   routes['POST /api/admin/password'] = only(async (req, res, user) => {

@@ -146,3 +146,12 @@
 .members .member small { font: 400 12px var(--font, sans-serif); color: var(--ash-2); }
 .members .member small.on { color: var(--ok); }
 .members .m-at { border-radius: 50%; }
+
+/* bandeau de prise de main par un admin */
+.takeover { position: fixed; left: 50%; top: 10px; z-index: 200; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; max-width: calc(100vw - 24px); padding: 10px 10px 10px 18px; border-radius: 14px; font-size: 14px; color: #1a1204; background: linear-gradient(180deg, #fff0b8, #e9bf5a); box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+.takeover b { font-weight: 800; }
+.takeover button { flex: none; padding: 9px 14px; border-radius: 10px; font-weight: 700; color: #fff; background: #1a1204; }
+.takeover-note p { color: var(--ash); }
+.takeover-note ul { margin: 10px 0 18px; padding: 0; list-style: none; }
+.takeover-note li { padding: 6px 0; }
+@media (max-width: 760px) { .takeover { flex-direction: column; align-items: stretch; top: 62px; font-size: 13px; } }
