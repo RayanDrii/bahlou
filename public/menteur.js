@@ -15,7 +15,23 @@ const Menteur = (() => {
   const el = (id) => root()?.querySelector('#' + id);
   const request = (action, body) => api(body === undefined ? 'GET' : 'POST', '/api/menteur/' + action, body);
   const host = () => room?.host === state.me;
-  const face = (c) => Club.cardSvg(c);
+  const face = (c) => (rankOf(c) >= 9 && rankOf(c) <= 11 ? court(c) : Club.cardSvg(c));
+
+  /* figures dessinées : buste en haut, le même retourné en bas, comme sur un vrai jeu */
+  function court(c) {
+    const s = Math.floor(c / 13), r = rankOf(c), red = s === 1 || s === 2;
+    const main = red ? '#c8102e' : '#1d2f7a', alt = red ? '#1d2f7a' : '#c8102e', gold = '#e9bf5a', skin = '#f3d6b6';
+    const hair = r === 10 ? '#8a4a1c' : '#3b2412', ink = '#1a1a1a';
+    const suit = `<path d="${Club.SUIT_PATH[s]}" transform="translate(63 23) scale(.25)" fill="${red ? '#c8102e' : '#141414'}"/>`;
+    const face = `<rect x="47.5" y="46" width="5" height="6" fill="${skin}"/><circle cx="50" cy="40" r="8" fill="${skin}" stroke="${ink}" stroke-width=".6"/><circle cx="47" cy="39.5" r=".9" fill="${ink}"/><circle cx="53" cy="39.5" r=".9" fill="${ink}"/><path d="M47.5 43.5q2.5 1.6 5 0" fill="none" stroke="#a5523a" stroke-width=".8"/>`;
+    const robe = `<path d="M27 70 L30 57 Q50 47 70 57 L73 70Z" fill="${main}" stroke="${ink}" stroke-width=".6"/><path d="M50 50 L50 70" stroke="${gold}" stroke-width="2.2"/><path d="M37 56 Q50 63 63 56 L61 52 Q50 58 39 52Z" fill="#fff" stroke="${ink}" stroke-width=".5"/><circle cx="44" cy="56" r=".9" fill="${ink}"/><circle cx="50" cy="58" r=".9" fill="${ink}"/><circle cx="56" cy="56" r=".9" fill="${ink}"/><path d="M30 62 L40 60 L39 70 L28 70Z" fill="${alt}" opacity=".85"/><path d="M70 62 L60 60 L61 70 L72 70Z" fill="${alt}" opacity=".85"/>`;
+    let top;
+    if (r === 11) top = `${robe}<path d="M66 70 L68 40" stroke="${gold}" stroke-width="2"/><circle cx="68" cy="38" r="2.6" fill="${gold}" stroke="${ink}" stroke-width=".5"/>${face}<path d="M42.5 42 Q50 57 57.5 42 Q50 48 42.5 42Z" fill="${hair}"/><path d="M41 34 L41 25 L45.5 29.5 L50 22 L54.5 29.5 L59 25 L59 34Z" fill="${gold}" stroke="${ink}" stroke-width=".6"/><circle cx="50" cy="30" r="1.4" fill="${alt}"/>`;
+    else if (r === 10) top = `${robe}<path d="M41.5 42 Q39 28 50 29.5 Q61 28 58.5 42 L63 54 Q55 49 56.5 40 Q50 35 43.5 40 Q45 49 37 54Z" fill="${hair}"/>${face.replace(/<rect[^>]*>/, '')}<path d="M43 32 L46 27.5 L50 31 L54 27.5 L57 32Z" fill="${gold}" stroke="${ink}" stroke-width=".5"/><circle cx="35" cy="61" r="3.4" fill="${alt}"/><circle cx="35" cy="61" r="1.3" fill="${gold}"/><path d="M35 64.5 L36 70" stroke="#2f7a3a" stroke-width="1.2"/>`;
+    else top = `${robe}<path d="M33 70 L31 33" stroke="#7a5a1c" stroke-width="1.8"/><path d="M31 33 L26 38 L31 41 L36 38Z" fill="#c9c9d0" stroke="${ink}" stroke-width=".5"/>${face}<path d="M42 41 Q42 31 50 30.5 Q58 31 58 41 Q56 36 50 35.5 Q44 36 42 41Z" fill="${hair}"/><path d="M39 33 Q50 21 61 33 Q50 30 39 33Z" fill="${alt}" stroke="${ink}" stroke-width=".5"/><path d="M57 28 Q66 18 70 22 Q63 23 59 30Z" fill="${gold}"/>`;
+    const art = `<rect x="23" y="18" width="54" height="104" rx="3" fill="#fbf4df" stroke="${gold}" stroke-width="1.4"/><clipPath id="cc${c}"><rect x="23" y="18" width="54" height="52"/></clipPath><g clip-path="url(#cc${c})">${top}</g><g transform="rotate(180 50 70)" clip-path="url(#cc${c})">${top}</g><path d="M23 70 H77" stroke="${gold}" stroke-width="1"/>${suit}<g transform="rotate(180 50 70)">${suit}</g>`;
+    return Club.cardSvg(c).replace(/<rect x="23"[\s\S]*<\/svg>$/, art + '</svg>');
+  }
   const back = () => Club.cardSvg(-1);
 
   function message(text, bad = true) {
@@ -99,7 +115,7 @@ const Menteur = (() => {
     const turn = room.turn === p.name, fan = Math.min(p.count, 7);
     return `<div class="ms ${turn ? 'turn' : ''} ${p.left ? 'away' : ''} ${room.winner === p.name ? 'won' : ''}" data-seat="${esc(p.name)}">
       <div class="ms-fan" style="--n:${fan}">${Array.from({ length: fan }, (_, i) => `<i style="--i:${i}">${back()}</i>`).join('')}</div>
-      <div class="ms-id">${p.bot ? '<span class="ml-bot">R</span>' : avatar(p.name, 'sm').outerHTML}<b>${esc(p.name)}</b><span class="ms-n">${p.count}</span></div>
+      <div class="ms-id">${p.bot ? '<span class="ml-bot">R</span>' : avatar(p.name, 'sm').outerHTML}<b title="${esc(p.name)}">${esc(p.bot && room.players.length > 6 ? p.name.replace(/^Robot /, '') : p.name)}</b><span class="ms-n">${p.count}</span></div>
       ${turn ? '<i class="ms-clock"><b class="js-clock"></b></i>' : ''}${p.left ? '<small>Parti, un robot joue</small>' : ''}</div>`;
   }
   function logLine(e) {
@@ -115,6 +131,7 @@ const Menteur = (() => {
   function renderTable(before) {
     const myTurn = room.phase === 'playing' && room.turn === state.me;
     const i = room.players.findIndex((p) => p.name === state.me);
+    const many = room.players.length > 6;
     const others = [...room.players.slice(i + 1), ...room.players.slice(0, Math.max(0, i))];
     const stack = Math.min(room.pile, 9);
     const newLog = room.log.length !== (before?.log?.length ?? room.log.length);
@@ -123,7 +140,7 @@ const Menteur = (() => {
       <header class="mt-top"><div class="mt-title"><small>Table ${esc(room.code)}</small><b>Le Menteur</b></div>
         <div class="mt-fam" title="Familles retirées du jeu">${room.removed.length ? room.removed.map((f) => `<span>${SHORT[f.rank]}</span>`).join('') : '<em>Aucune famille sortie</em>'}</div>
         ${button('leave', 'Quitter', 'ghost')}</header>
-      <div class="mt-seats">${others.map(seatHtml).join('')}</div>
+      <div class="mt-seats ${many ? 'many' : ''}">${others.map(seatHtml).join('')}</div>
       <div class="mt-center">
         <div class="mt-pile ${newLog && lastPlay && room.last ? 'drop' : ''}" style="--n:${stack}">${stack ? Array.from({ length: stack }, (_, k) => `<i style="--k:${k};--r:${((k * 37) % 15) - 7}deg">${back()}</i>`).join('') : '<span class="mt-empty">Tas vide</span>'}</div>
         <div class="mt-call">
@@ -141,14 +158,15 @@ const Menteur = (() => {
     if (room.reveal && room.reveal.id !== seenReveal) { seenReveal = room.reveal.id; showReveal(room.reveal); }
   }
   function handHtml(myTurn) {
-    const lead = myTurn && room.lead, follow = myTurn && !room.lead;
-    const status = room.phase !== 'playing' ? '' : !myTurn ? `C’est à <b>${esc(room.turn)}</b> de jouer` : lead ? 'Choisis tes cartes, puis la valeur que tu annonces' : `Pose des <b>${PLURAL[room.rank]}</b>, vrais ou faux, ou accuse <b>${esc(room.last.by)}</b>`;
+    const lead = myTurn && room.lead;
+    const canCall = room.phase === 'playing' && room.last && room.last.by !== state.me;
+    const status = room.phase !== 'playing' ? '' : !myTurn ? `C’est à <b>${esc(room.turn)}</b> de jouer${canCall ? ` · tu peux quand même accuser <b>${esc(room.last.by)}</b>` : ''}` : lead ? 'Choisis tes cartes, puis la valeur que tu annonces' : `Pose des <b>${PLURAL[room.rank]}</b>, vrais ou faux, ou accuse <b>${esc(room.last.by)}</b>`;
     return `<footer class="mt-me">
       <p class="mt-status">${status}<span class="mt-mine"><b class="js-clock-me"></b></span></p>
       ${lead ? `<div class="mt-ranks" role="radiogroup" aria-label="Valeur annoncée">${SHORT.map((r, k) => `<button type="button" role="radio" aria-checked="${chosenRank === k}" class="${chosenRank === k ? 'on' : ''}" data-rank="${k}">${r}</button>`).join('')}</div>` : ''}
       <div class="mt-hand ${myTurn ? '' : 'idle'}" style="--n:${room.hand.length}">${room.hand.map((c, k) => `<button type="button" class="mt-card ${selected.has(c) ? 'sel' : ''}" data-card="${c}" style="--k:${k}" aria-pressed="${selected.has(c)}" aria-label="${NAMES[rankOf(c)]} de ${['pique', 'cœur', 'carreau', 'trèfle'][Math.floor(c / 13)]}" ${myTurn ? '' : 'tabindex="-1"'}>${face(c)}</button>`).join('')}</div>
       <div class="mt-acts">
-        ${follow ? button('liar', 'Menteur !', 'red big') : ''}
+        ${canCall ? button('liar', `Menteur${myTurn ? '' : ', ' + esc(room.last.by)} !`, 'red big') : ''}
         ${myTurn ? button('play', '', 'gold big', true, 'id="mt-play"') : ''}
       </div>
       <p id="mt-msg" class="mt-msg" role="status"></p>
@@ -224,6 +242,7 @@ const Menteur = (() => {
     else if (act === 'turn') action('settings', { turn: Number(b.dataset.v) });
     else if (act === 'unbot') action('unbot', { name: b.dataset.name });
     else if (act === 'play') { const cards = [...selected]; const r = await action('play', room.lead ? { cards, rank: chosenRank } : { cards }); if (r) { selected.clear(); chosenRank = null; } }
+    else if (act === 'liar') { if (room.last) action('liar', { playId: room.last.id }); }
     else action(act);
   }
 
@@ -255,5 +274,5 @@ const Menteur = (() => {
       if (data.room === null || !room || data.room.code === room.code) accept(data);
     });
   }
-  return { open, stop, bind, refresh };
+  return { open, stop, bind, refresh, card: face };
 })();

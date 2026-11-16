@@ -43,7 +43,7 @@
 .ml-code { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
 .ml-code span { font: 600 11px var(--mono); text-transform: uppercase; color: var(--ash); }
 .ml-code strong { font: 700 34px var(--mono); letter-spacing: .14em; color: var(--acc); }
-.ml-seats { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
+.ml-seats { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; }
 .ml-seats li { display: flex; align-items: center; gap: 12px; padding: 8px 10px; background: rgba(255, 255, 255, .05); }
 .ml-seats b { font-weight: 700; }
 .ml-seats em { font: 500 11px var(--mono); font-style: normal; text-transform: uppercase; color: var(--ash); }
@@ -76,6 +76,15 @@
 .ms-id { display: flex; align-items: center; gap: 8px; }
 .ms-id b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-n { min-width: 28px; padding: 4px 6px; text-align: center; font: 900 18px/1 var(--display); color: #1a1204; background: #fff; }
+/* grande table (7 à 13) : des sièges compacts sur plusieurs rangées */
+.mt-seats.many { gap: 6px; }
+.mt-seats.many .ms { min-width: 0; width: 150px; padding: 8px 9px 10px; }
+.mt-seats.many .ms-fan { height: 34px; width: calc(24px + (var(--n) - 1) * 7px); margin-bottom: 6px; }
+.mt-seats.many .ms-fan i { width: 24px; left: calc(var(--i) * 7px); }
+.mt-seats.many .ms-id { gap: 6px; }
+.mt-seats.many .ms-id .avatar, .mt-seats.many .ms-id .ml-bot { width: 24px; height: 24px; font-size: 12px; }
+.mt-seats.many .ms-id b { font-size: 13px; }
+.mt-seats.many .ms-n { min-width: 22px; padding: 3px 4px; font-size: 15px; }
 .ms-clock { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(0, 0, 0, .4); }
 .ms-clock b { display: block; height: 100%; background: var(--acc); transition: width .25s linear; }
 
@@ -163,6 +172,9 @@
   .mt-fam span { min-width: 22px; padding: 4px 5px; font-size: 15px; }
   .mt-seats { gap: 6px; }
   .ms { min-width: 0; flex: 1 1 100px; padding: 8px 8px 10px; }
+  .mt-seats.many .ms { width: auto; flex: 1 1 30%; }
+  .mt-seats.many .ms-fan { display: none; }
+  .mt-seats.many .ms-id .ml-bot { display: grid; width: 18px; height: 18px; font-size: 11px; }
   .ms-fan { height: 40px; --s: 7px; width: calc(28px + (var(--n) - 1) * 7px); }
   .ms-fan i { width: 28px; left: calc(var(--i) * 7px); }
   .ms-id .avatar, .ms-id .ml-bot { display: none; }

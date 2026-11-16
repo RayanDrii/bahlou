@@ -7,14 +7,14 @@ const RANK_NAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Valet', 'Dame
 const QUEEN_OF_HEARTS = 13 + 10, QUEEN_OF_SPADES = 10;
 const TURN_CHOICES = [0, 30, 45, 60];
 const DEFAULTS = { turn: 45 };
-const MAX_PLAYERS = 6, IDLE_MS = 3_600_000, LOG_SIZE = 30;
-const BOT_NAMES = ['Robot Lulu', 'Robot Max', 'Robot Zoé', 'Robot Paco', 'Robot Nina', 'Robot Gus'];
+const MAX_PLAYERS = 13, IDLE_MS = 3_600_000, LOG_SIZE = 30;
+const BOT_NAMES = ['Robot Lulu', 'Robot Max', 'Robot Zoé', 'Robot Paco', 'Robot Nina', 'Robot Gus', 'Robot Léa', 'Robot Tom', 'Robot Inès', 'Robot Hugo', 'Robot Jade', 'Robot Noé'];
 const rankOf = c => c % 13;
 const announce = (count, rank) => `${['', 'un', 'double', 'triple', 'carré de'][count]} ${RANK_NAMES[rank]}`;
 
 module.exports = function createMenteur({ routes, send, readBody, broadcast, now = Date.now, randomInt = crypto.randomInt, random = Math.random, timers = true }) {
   const rooms = new Map(), memberships = new Map(), creations = new Map();
-  let revealSeq = 0;
+  let revealSeq = 0, playSeq = 0;
   const fail = (status, message) => { const e = new Error(message); e.status = status; throw e; };
   const roomOf = name => rooms.get(memberships.get(name));
   const humans = r => r.players.filter(p => !p.bot && !p.left);
@@ -29,7 +29,7 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
       players: r.players.map(p => ({ name: p.name, bot: p.bot, left: p.left, count: p.hand.length })),
       hand: me ? [...me.hand].sort((a, b) => rankOf(a) - rankOf(b) || a - b) : [],
       turn: r.phase === 'playing' ? current(r).name : null, lead: r.lead, rank: r.rank, pile: r.pile.length,
-      last: r.last && { by: r.last.by, count: r.last.cards.length, rank: r.last.rank },
+      last: r.last && { id: r.last.id, by: r.last.by, count: r.last.cards.length, rank: r.last.rank },
       removed: r.removed, log: r.log, reveal: r.reveal, winner: r.winner, deadline: r.deadline, starter: r.starter,
     };
   }
@@ -93,21 +93,28 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
     }
     p.hand = p.hand.filter(c => !cards.includes(c));
     r.pile.push(...cards);
-    r.last = { by: p.name, cards, rank: r.rank };
+    r.last = { id: ++playSeq, by: p.name, cards, rank: r.rank };
     r.lead = false;
     log(r, { t: 'play', by: p.name, count: cards.length, rank: r.rank });
     nextTurn(r); schedule(r);
+    // un robot hors tour qui sait que l'annonce est impossible (il a les cartes) peut crier le premier
+    r.outCall = null;
+    const sure = r.players.filter(x => x.bot && x !== current(r) && x.name !== p.name && x.hand.filter(c => rankOf(c) === r.rank).length + cards.length > 4);
+    if (sure.length && random() < 0.6) r.outCall = { id: r.last.id, name: sure[Math.floor(random() * sure.length)].name, at: now() + 700 + Math.floor(random() * 900) };
   }
-  function liar(r, p) {
-    if (r.phase !== 'playing' || current(r) !== p) fail(409, 'Ce n’est pas ton tour.');
-    if (r.lead || !r.last) fail(409, 'Il n’y a rien à contester : c’est à toi d’ouvrir.');
+  // n'importe qui à la table (sauf celui qui vient de poser) peut crier « Menteur ! » tant que personne n'a rejoué
+  function liar(r, p, playId) {
+    if (r.phase !== 'playing') fail(409, 'La partie n’est pas en cours.');
+    if (r.lead || !r.last) fail(409, 'Il n’y a rien à contester pour l’instant.');
+    if (playId !== undefined && playId !== r.last.id) fail(409, 'Trop tard : quelqu’un a déjà rejoué.');
+    if (r.last.by === p.name) fail(409, 'Tu ne peux pas t’accuser toi-même.');
     const { by, cards, rank } = r.last, lied = cards.some(c => rankOf(c) !== rank);
     const accused = players(r, by), loser = lied ? accused : p;
     const taken = r.pile.length;
     loser.hand.push(...r.pile);
     r.reveal = { id: ++revealSeq, caller: p.name, by, cards, rank, lied, loser: loser.name, taken };
     log(r, { t: 'liar', by: p.name, target: by, lied, loser: loser.name, taken });
-    Object.assign(r, { pile: [], last: null, lead: true, rank: null });
+    Object.assign(r, { pile: [], last: null, lead: true, rank: null, outCall: null });
     removeFamilies(r, loser);
     if (!lied && !accused.hand.length) { win(r, by); return; }
     if (!loser.hand.length) { win(r, loser.name); return; }
@@ -148,6 +155,11 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
     for (const r of [...rooms.values()]) {
       if (t - r.touched > IDLE_MS || !humans(r).length) { drop(r); continue; }
       if (r.phase !== 'playing') continue;
+      if (r.outCall && t >= r.outCall.at) {
+        const call = r.outCall; r.outCall = null;
+        const bot = players(r, call.name);
+        if (bot && r.last?.id === call.id && r.last.by !== bot.name) { liar(r, bot, call.id); touch(r); continue; }
+      }
       const p = current(r);
       if ((r.botAt && t >= r.botAt && auto(p)) || (r.deadline && t >= r.deadline)) {
         if (!auto(p)) log(r, { t: 'timeout', by: p.name });
@@ -245,9 +257,10 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
     const r = getRoom(name), p = players(r, name);
     play(r, p, b.cards, b.rank); return r;
   });
-  route('POST', 'liar', name => {
+  route('POST', 'liar', (name, b) => {
     const r = getRoom(name), p = players(r, name);
-    liar(r, p); return r;
+    if (p.left) fail(409, 'Tu as quitté cette partie.');
+    liar(r, p, Number.isInteger(b.playId) ? b.playId : undefined); return r;
   });
   route('POST', 'rematch', name => {
     const r = getRoom(name, true);

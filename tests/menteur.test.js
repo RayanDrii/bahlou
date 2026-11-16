@@ -59,7 +59,7 @@ test('un joueur honnête accusé à tort : l’accusateur ramasse le tas', async
   const r = await s.table([[card(3), card(3, 1), card(7)], [card(5), card(9)], [card(2), card(4)]]);
   assert.equal((await s.call('play', 'alice', { cards: [card(3), card(3, 1)], rank: 3 })).status, 200);
   const bobView = (await s.call('state', 'bob', {}, 'GET')).data.room;
-  assert.deepEqual(bobView.last, { by: 'alice', count: 2, rank: 3 });
+  assert.deepEqual(bobView.last, { id: bobView.last.id, by: 'alice', count: 2, rank: 3 });
   assert.equal(bobView.pile, 2);
   assert.ok(!JSON.stringify(bobView).includes('"cards"'), 'les cartes posées restent cachées');
   await s.call('liar', 'bob');
@@ -147,4 +147,35 @@ test('quitter en pleine partie laisse un robot jouer à sa place', async () => {
   s.advance(3000);
   assert.equal(r.players[0].hand.length < 2 || r.pile.length > 0, true);
   assert.equal((await s.call('state', 'alice', {}, 'GET')).data.room, null);
+});
+
+test('n’importe qui à la table peut crier Menteur, pas seulement le suivant', async () => {
+  const s = setup();
+  const r = await s.table([[card(3), card(8)], [card(5), card(9)], [card(2), card(4), card(6)]]);
+  await s.call('play', 'alice', { cards: [card(8)], rank: 3 });
+  assert.equal(r.players[r.turn].name, 'bob');
+  assert.equal((await s.call('liar', 'alice')).status, 409, 'on ne s’accuse pas soi-même');
+  const id = r.last.id;
+  assert.equal((await s.call('liar', 'carl', { playId: id })).status, 200);
+  assert.equal(r.reveal.caller, 'carl');
+  assert.equal(r.reveal.loser, 'alice');
+  assert.equal(r.players[r.turn].name, 'carl', 'celui qui avait raison ouvre');
+  // une accusation qui arrive après une nouvelle pose est refusée
+  await s.call('play', 'carl', { cards: [card(2)], rank: 0 });
+  await s.call('play', 'alice', { cards: [card(3)] });
+  assert.equal((await s.call('liar', 'bob', { playId: id })).status, 409);
+});
+
+test('la table monte à 13 joueurs, quatre cartes chacun', async () => {
+  const s = setup();
+  const { data } = await s.call('create');
+  for (let i = 0; i < 12; i++) assert.equal((await s.call('bot')).status, 200);
+  assert.equal((await s.call('bot')).status, 409, 'pas de quatorzième place');
+  await s.call('start');
+  const r = s.m.rooms.get(data.room.code);
+  assert.equal(r.players.length, 13);
+  assert.equal(r.players.reduce((t, p) => t + p.hand.length, 0) + r.removed.length * 4, 52);
+  assert.ok(r.players.every(p => p.hand.length <= 4));
+  for (let i = 0; i < 4000 && r.phase === 'playing'; i++) s.advance(46_000);
+  assert.equal(r.phase, 'over');
 });
