@@ -320,7 +320,7 @@ const Club = (() => {
           <div class="hc-txt"><small>Street View</small><h2>Bahlou Guessr</h2><p>Lâché quelque part sur Terre : trouve où tu es, seul ou entre potes.</p></div>
           <dl class="hc-fact"><dt>Parties</dt><dd>Solo ou en salon</dd></dl><span class="hc-go">Partir</span></a>
         <a class="hub-card hc-menteur" href="#/menteur"><span class="hc-art"><svg viewBox="0 0 96 96" aria-hidden="true">${HUB_ART.menteur}</svg></span>
-          <div class="hc-txt"><small>Cartes · 2 à 6</small><h2>Le Menteur</h2><p>Annonce, bluffe, et crie « Menteur ! » au bon moment.</p></div>
+          <div class="hc-txt"><small>Cartes · 2 à 13</small><h2>Le Menteur</h2><p>Annonce, bluffe, et crie « Menteur ! » au bon moment.</p></div>
           <dl class="hc-fact"><dt>Parties</dt><dd>Robots ou potes</dd></dl><span class="hc-go">S’asseoir</span></a>
       </section>
       ${recent.length ? `<h2 class="lb-sec">Reprendre</h2><section class="tiles hub-recent">${recent.map(tileHtml).join('')}</section>` : ''}

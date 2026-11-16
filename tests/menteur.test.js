@@ -198,3 +198,16 @@ test('dans une grande table, chaque joueur finit par avoir la main', async () =>
   }
   assert.ok(mine >= 1, 'le tour d’alice arrive');
 });
+
+test('les tables qui attendent sont listées pour tout le monde, et disparaissent une fois lancées', async () => {
+  const s = setup();
+  const { data } = await s.call('create', 'alice');
+  const seen = (await s.call('state', 'zoe', {}, 'GET')).data.open;
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].code, data.room.code);
+  assert.equal(seen[0].host, 'alice');
+  assert.ok(s.events.some(e => e.event === 'menteur:tables' && e.users == null), 'la liste est diffusée à tous');
+  assert.equal((await s.call('join', 'zoe', { code: seen[0].code })).status, 200);
+  await s.call('start', 'alice');
+  assert.equal((await s.call('state', 'bob', {}, 'GET')).data.open.length, 0);
+});

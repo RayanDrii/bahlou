@@ -9,6 +9,7 @@ const Menteur = (() => {
   const rankOf = (c) => c % 13;
   const TURN_LABEL = (s) => (s ? `${s} s` : 'Illimité');
 
+  let tables = [];
   let active = false, generation = 0, room = null, config = null, busy = false, mutation = 0, offset = 0, timer = null, poll = null;
   let selected = new Set(), chosenRank = null, seenReveal = 0, seenLog = 0, revealTimer = null, screen = '';
   const root = () => document.querySelector('#menteur-body');
@@ -40,6 +41,7 @@ const Menteur = (() => {
   }
   function accept(data) {
     if (!active) return;
+    if (Array.isArray(data.open)) tables = data.open;
     if (room && data.room && data.room.code === room.code && data.room.version < room.version) return;
     offset = data.serverNow - Date.now();
     const before = room;
@@ -75,19 +77,21 @@ const Menteur = (() => {
   }
   function renderHome() {
     root().innerHTML = `<section class="mh">
-      <div class="mh-hero"><small>Jeu de cartes · 2 à 6 joueurs</small><h1>Le Menteur</h1>
+      <div class="mh-hero"><small>Jeu de cartes · 2 à 13 joueurs</small><h1>Le Menteur</h1>
         <p>Pose tes cartes face cachée et annonce ce que tu poses. Le suivant te croit et suit, ou crie « Menteur ! ». Le premier qui n’a plus de cartes gagne.</p></div>
       <ol class="mh-rules">
         <li><b>La dame de cœur commence</b><span>Elle ouvre en posant 1 à 4 cartes et en annonçant une valeur : « double 5 ».</span></li>
         <li><b>Suis ou bluffe</b><span>Le suivant pose d’autres 5, des vrais ou pas, ou retourne les dernières cartes en criant « Menteur ! ».</span></li>
         <li><b>Qui se trompe ramasse</b><span>Menteur démasqué ou accusation ratée : le perdant prend tout le tas, puis le jeu reprend avec celui dont c’était le tour. Une famille de quatre est retirée du jeu.</span></li>
       </ol>
+      <section class="mh-open"><h2>Tables ouvertes</h2><div id="mt-open"></div></section>
       <div class="mh-grid">
         <article class="mh-card"><h2>Contre les robots</h2><p>Une table avec deux robots, tout de suite.</p>${button('solo', 'Jouer maintenant', 'gold')}</article>
         <article class="mh-card"><h2>Avec tes potes</h2><p>Crée une table, partage le code, complète avec des robots si besoin.</p>${button('create', 'Créer une table')}
           <form id="mt-join" class="mh-join"><input id="mt-code" maxlength="6" autocomplete="off" placeholder="CODE" aria-label="Code de la table"><button type="submit" class="mt-btn ghost" data-mt="join">Rejoindre</button></form></article>
       </div>
       <p id="mt-msg" class="mt-msg" role="status"></p></section>`;
+    paintTables();
     el('mt-join').addEventListener('submit', (e) => { e.preventDefault(); action('join', { code: el('mt-code').value.trim().toUpperCase() }); });
   }
   function renderLobby() {
@@ -237,6 +241,7 @@ const Menteur = (() => {
   async function onAction(e) {
     const b = e.currentTarget, act = b.dataset.mt;
     if (act === 'join') return;
+    if (act === 'joincode') { action('join', { code: b.dataset.code }); return; }
     if (act === 'copy') {
       const link = `${location.origin}${location.pathname}#/menteur/${room.code}`;
       try { await navigator.clipboard.writeText(link); message('Lien copié. Envoie-le à tes potes.', false); } catch { message('Copie ce lien : ' + link, false); }
@@ -270,7 +275,21 @@ const Menteur = (() => {
   function stop() {
     active = false; generation++; clearInterval(timer); clearInterval(poll); clearTimeout(revealTimer); timer = poll = null; screen = '';
   }
+  function paintTables() {
+    const box = el('mt-open');
+    if (!box) return;
+    box.innerHTML = tables.length
+      ? `<ul class="mo-list">${tables.map((t) => `<li><span class="mo-host">${avatar(t.host, 'sm').outerHTML}<span><b>Table de ${esc(t.host)}</b><small>${t.humans.length > 1 ? 'avec ' + t.humans.filter((n) => n !== t.host).map(esc).join(', ') : 'en attente de joueurs'}</small></span></span><em>${t.players} / ${t.max}</em>${button('joincode', 'Rejoindre', 'gold', false, `data-code="${esc(t.code)}"`)}</li>`).join('')}</ul>`
+      : '<p class="mo-empty">Aucune table ouverte pour l’instant. Crée la tienne, elle apparaîtra ici pour tes potes.</p>';
+    box.querySelectorAll('[data-mt]').forEach((b) => b.addEventListener('click', onAction));
+    paintBusy();
+  }
   function bind(es) {
+    es.addEventListener('menteur:tables', (e) => {
+      if (!active) return;
+      tables = JSON.parse(e.data).open || [];
+      if (!room) paintTables();
+    });
     es.addEventListener('menteur:state', (e) => {
       if (!active || !config) return;
       const data = JSON.parse(e.data);

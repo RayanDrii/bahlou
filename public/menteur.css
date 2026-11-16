@@ -29,6 +29,17 @@
 .mh-rules li::before { content: counter(r); position: absolute; left: 18px; top: 14px; font: 900 40px/1 var(--display); color: var(--acc); }
 .mh-rules b { font: 900 22px/1 var(--display); text-transform: uppercase; }
 .mh-rules span { font-size: 14px; line-height: 1.45; color: rgba(255, 255, 255, .78); }
+/* tables ouvertes : rejoindre en un clic */
+.mh-open { margin: 0 0 14px; padding: 20px 22px; background: rgba(0, 0, 0, .42); box-shadow: inset 0 0 0 1px rgba(255, 207, 110, .3); clip-path: var(--cut); }
+.mh-open h2 { margin-bottom: 12px; }
+.mo-list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mo-list li { display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 12px; background: rgba(255, 255, 255, .06); animation: mt-pop .35s var(--snap); }
+.mo-host { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+.mo-host > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mo-host b { font: 900 22px/1 var(--display); text-transform: uppercase; }
+.mo-host small { font-size: 12px; letter-spacing: 0; text-transform: none; color: rgba(255, 255, 255, .7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mo-list em { font: 700 14px var(--mono); font-style: normal; color: var(--acc); }
+.mo-empty { margin: 0; color: rgba(255, 255, 255, .7); }
 .mh-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .mh-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px; background: rgba(0, 0, 0, .42); clip-path: var(--cut); }
 .mh-card h2 { margin: 0; }
@@ -170,6 +181,8 @@
 @media (max-width: 760px) {
   .menteur-body { padding: 14px 12px 20px; }
   .mh-grid { grid-template-columns: minmax(0, 1fr); }
+  .mo-list li { flex-wrap: wrap; }
+  .mo-list .mt-btn { flex: 1 1 100%; }
   .mt { min-height: 0; gap: 10px; }
   .mt-title b { font-size: 26px; }
   .mt-top { gap: 8px; }

@@ -37,6 +37,19 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
     r.version++; r.touched = now();
     for (const p of humans(r)) broadcast('menteur:state', { room: view(r, p.name), serverNow: now() }, [p.name]);
   }
+  // les tables qui attendent des joueurs, visibles par tout le monde pour rejoindre en un clic
+  function openTables() {
+    return [...rooms.values()].filter(r => r.phase === 'waiting' && r.players.length < MAX_PLAYERS)
+      .sort((a, b) => b.touched - a.touched).slice(0, 20)
+      .map(r => ({ code: r.code, host: r.host, players: r.players.length, humans: humans(r).map(p => p.name), max: MAX_PLAYERS }));
+  }
+  let lastTables = '[]';
+  function castTables() {
+    const open = openTables(), json = JSON.stringify(open);
+    if (json === lastTables) return;
+    lastTables = json;
+    broadcast('menteur:tables', { open });
+  }
   function drop(r) {
     rooms.delete(r.code);
     for (const p of r.players) if (memberships.get(p.name) === r.code) memberships.delete(p.name);
@@ -152,7 +165,7 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
   function tick() {
     const t = now();
     for (const r of [...rooms.values()]) {
-      if (t - r.touched > IDLE_MS || !humans(r).length) { drop(r); continue; }
+      if (t - r.touched > IDLE_MS || !humans(r).length) { drop(r); castTables(); continue; }
       if (r.phase !== 'playing') continue;
       if (r.outCall && t >= r.outCall.at) {
         const call = r.outCall; r.outCall = null;
@@ -184,7 +197,8 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
         tick();
         const r = handler(user, body);
         if (r) touch(r);
-        send(res, 200, { room: view(roomOf(user), user), serverNow: now() });
+        castTables();
+        send(res, 200, { room: view(roomOf(user), user), open: openTables(), serverNow: now() });
       } catch (e) { send(res, e.status || 400, { error: e.status ? e.message : 'Requête invalide.' }); }
     };
   }
