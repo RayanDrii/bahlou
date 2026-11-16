@@ -259,6 +259,11 @@
 .ro-tools { display: grid; grid-template-columns: repeat(2, auto); gap: 3px 6px; }
 .ro-tools button { padding: 4px 11px; font-size: 13px; color: var(--ash); background: var(--ink-3); border: 1px solid var(--line); }
 .ro-tools button:hover { border-color: var(--casino-gold); color: #fff; }
+/* Max : tout le solde d'un coup, mis en avant sur chaque jeu */
+.bb-ops button[data-a="max"], .ro-tools .max, .po-max { color: var(--on-acc, #1a1204); background: var(--gold-metal, var(--casino-gold)); border-color: transparent; font-weight: 800; }
+.bb-ops button[data-a="max"]:hover, .ro-tools .max:hover, .po-max:hover { color: var(--on-acc, #1a1204); filter: brightness(1.08); }
+.ro-tools .max { grid-column: 1 / -1; }
+.po-max { flex: none; min-height: 40px; padding: 0 18px; font: 800 20px/1 var(--display); text-transform: uppercase; }
 
 /* ---------- blackjack */
 .bj-stage { display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 16px 20px; --cw: clamp(68px, 13vh, 112px); }
@@ -424,7 +429,6 @@
 .gm-tower .bb-chips, .gm-mines .bb-chips { --chip: 42px; }
 .gm-tower .play, .gm-duel .play { min-width: 128px; padding: 0 12px; }
 .gm-tower .gm-p, .gm-duel .gm-p, .gm-mines .gm-p { gap: 14px; }
-.gm-tower .bb-ops { display: none; }
 
 /* ---------- écrans étroits */
 @media (max-width: 1460px) {

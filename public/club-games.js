@@ -32,7 +32,7 @@
       ${OUT.map(([k, t]) => `<button type="button" class="wl half" data-k="${k}" style="grid-row:5">${t}</button>`).join('')}</div></div></div>
       <aside class="gm-p"><div class="ro-chips" id="ro-ch">${CHIP_VALUES.map((v) => `<button type="button" data-v="${v}">${chipHtml(v)}</button>`).join('')}</div>
       <div class="kv"><span>Mise totale</span><b id="ro-tot">0</b></div>
-      <div class="ro-tools"><button type="button" data-t="undo">Annuler</button><button type="button" data-t="clear">Effacer</button><button type="button" data-t="dbl">Doubler</button><button type="button" data-t="again">Rejouer</button></div>
+      <div class="ro-tools"><button type="button" data-t="undo">Annuler</button><button type="button" data-t="clear">Effacer</button><button type="button" data-t="dbl">Doubler</button><button type="button" data-t="again">Rejouer</button><button type="button" data-t="max" class="max" title="Mise tout ton solde restant sur ta dernière case">Max</button></div>
       <button type="button" class="play" id="ro-go" disabled>Lancer la bille</button></aside>`;
     const table = q('#ro-t', b), go = q('#ro-go', b), tot = q('#ro-tot', b);
     let chip = store.get('ro.chip', 100), bets = new Map(), stack = [], last = store.get('ro.last', []), hist = store.get('ro.hist', []), spinning = false, pending = null;
@@ -67,6 +67,13 @@
       if (t === 'undo') { const s = stack.pop(); if (s) { const v = bets.get(s[0]) - s[1]; v > 0 ? bets.set(s[0], v) : bets.delete(s[0]); } }
       else if (t === 'clear') { bets.clear(); stack = []; }
       else if (t === 'dbl') { if (total() * 2 > cap()) return toast('Plafond de mise atteint', true); for (const [k, v] of bets) { bets.set(k, v * 2); stack.push([k, v]); } }
+      else if (t === 'max') {
+        // tout le solde restant sur la dernière case misée
+        if (!stack.length) return toast('Pose d’abord un jeton sur une case, Max y mettra tout ton solde', true);
+        const k = stack[stack.length - 1][0], add = Math.floor(cap() - total());
+        if (add <= 0) return toast('Tout ton solde est déjà sur la table', true);
+        bets.set(k, (bets.get(k) || 0) + add); stack.push([k, add]);
+      }
       else if (t === 'again' && last.length) { if (last.reduce((a, [, v]) => a + v, 0) > cap()) return toast('Solde insuffisant', true); bets = new Map(last); stack = last.map(([k, v]) => [k, v]); }
       paintBets();
     };
@@ -291,10 +298,12 @@
         const key = 'sit' + C.me.coins; if (actKey === key) return; actKey = key;
         const max = C.me.coins, can = max >= v.minBuyin;
         const start = Math.min(max, Math.max(v.minBuyin, 5000));
-        actEl.innerHTML = can ? `<div class="po-buy"><div><small>Cave</small><b id="po-bv">${fmt(start)}</b></div><input type="range" id="po-bi" min="${v.minBuyin}" max="${max}" step="100" value="${start}"><button type="button" class="play" id="po-sit">Prendre place</button></div>` : `<div class="po-buy"><p>La table demande ${fmt(v.minBuyin)} bahlous au minimum.</p></div>`;
+        actEl.innerHTML = can ? `<div class="po-buy"><div><small>Cave</small><b id="po-bv">${fmt(start)}</b></div><input type="range" id="po-bi" min="${v.minBuyin}" max="${max}" step="100" value="${start}"><button type="button" class="po-max" id="po-max">Max</button><button type="button" class="play" id="po-sit">Prendre place</button></div>` : `<div class="po-buy"><p>La table demande ${fmt(v.minBuyin)} bahlous au minimum.</p></div>`;
         const rg = q('#po-bi', actEl); if (!rg) return;
-        rg.oninput = () => (q('#po-bv', actEl).textContent = fmt(+rg.value));
-        q('#po-sit', actEl).onclick = () => post('poker/sit', { buyin: +rg.value }).then((r) => r && sfx.chip());
+        let allIn = false;
+        rg.oninput = () => { allIn = false; q('#po-bv', actEl).textContent = fmt(+rg.value); };
+        q('#po-max', actEl).onclick = () => { rg.value = max; allIn = true; q('#po-bv', actEl).textContent = fmt(max); sfx.chip(); };
+        q('#po-sit', actEl).onclick = () => post('poker/sit', { buyin: allIn ? max : +rg.value }).then((r) => r && sfx.chip());
         return;
       }
       const myTurn = v.cur === me && !s.folded;
