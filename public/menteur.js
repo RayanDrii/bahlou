@@ -80,7 +80,7 @@ const Menteur = (() => {
       <ol class="mh-rules">
         <li><b>La dame de cœur commence</b><span>Elle ouvre en posant 1 à 4 cartes et en annonçant une valeur : « double 5 ».</span></li>
         <li><b>Suis ou bluffe</b><span>Le suivant pose d’autres 5, des vrais ou pas, ou retourne les dernières cartes en criant « Menteur ! ».</span></li>
-        <li><b>Qui se trompe ramasse</b><span>Menteur démasqué ou accusation ratée : le perdant prend tout le tas. Une famille de quatre est retirée du jeu.</span></li>
+        <li><b>Qui se trompe ramasse</b><span>Menteur démasqué ou accusation ratée : le perdant prend tout le tas, puis le jeu reprend avec celui dont c’était le tour. Une famille de quatre est retirée du jeu.</span></li>
       </ol>
       <div class="mh-grid">
         <article class="mh-card"><h2>Contre les robots</h2><p>Une table avec deux robots, tout de suite.</p>${button('solo', 'Jouer maintenant', 'gold')}</article>
@@ -112,27 +112,28 @@ const Menteur = (() => {
   }
 
   function seatHtml(p) {
-    const turn = room.turn === p.name, fan = Math.min(p.count, 7);
-    return `<div class="ms ${turn ? 'turn' : ''} ${p.left ? 'away' : ''} ${room.winner === p.name ? 'won' : ''}" data-seat="${esc(p.name)}">
+    const turn = room.turn === p.name, fan = Math.min(p.count, 7), mine = p.name === state.me;
+    return `<div class="ms ${mine ? 'me' : ''} ${turn ? 'turn' : ''} ${p.left ? 'away' : ''} ${room.winner === p.name ? 'won' : ''}" data-seat="${esc(p.name)}">
       <div class="ms-fan" style="--n:${fan}">${Array.from({ length: fan }, (_, i) => `<i style="--i:${i}">${back()}</i>`).join('')}</div>
-      <div class="ms-id">${p.bot ? '<span class="ml-bot">R</span>' : avatar(p.name, 'sm').outerHTML}<b title="${esc(p.name)}">${esc(p.bot && room.players.length > 6 ? p.name.replace(/^Robot /, '') : p.name)}</b><span class="ms-n">${p.count}</span></div>
+      <div class="ms-id">${p.bot ? '<span class="ml-bot">R</span>' : avatar(p.name, 'sm').outerHTML}<b title="${esc(p.name)}">${mine ? `${esc(p.name)} <em>toi</em>` : esc(p.bot && room.players.length > 6 ? p.name.replace(/^Robot /, '') : p.name)}</b><span class="ms-n">${p.count}</span></div>
       ${turn ? '<i class="ms-clock"><b class="js-clock"></b></i>' : ''}${p.left ? '<small>Parti, un robot joue</small>' : ''}</div>`;
   }
   function logLine(e) {
     const who = (n) => `<b>${esc(n === state.me ? 'Toi' : n)}</b>`;
-    if (e.t === 'play') return `${who(e.by)} annonce <em>${announce(e.count, e.rank)}</em>`;
+    const me = e.by === state.me;
+    if (e.t === 'play') return `${me ? '<b>Tu</b> annonces' : who(e.by) + ' annonce'} <em>${announce(e.count, e.rank)}</em>`;
     if (e.t === 'liar') return `${who(e.by)} accuse ${who(e.target)} : ${e.lied ? 'menteur démasqué' : 'il disait vrai'}, ${who(e.loser)} ramasse ${e.taken}`;
-    if (e.t === 'family') return `${who(e.by)} complète les ${PLURAL[e.rank]}, la famille sort du jeu`;
-    if (e.t === 'timeout') return `${who(e.by)} n’a pas joué à temps`;
+    if (e.t === 'family') return `${me ? '<b>Tu</b> complètes' : who(e.by) + ' complète'} les ${PLURAL[e.rank]}, la famille sort du jeu`;
+    if (e.t === 'timeout') return me ? '<b>Tu</b> n’as pas joué à temps, un robot a joué pour toi' : `${who(e.by)} n’a pas joué à temps`;
     if (e.t === 'left') return `${who(e.by)} a quitté la table`;
-    if (e.t === 'win') return `${who(e.by)} n’a plus de cartes et gagne`;
+    if (e.t === 'win') return me ? '<b>Tu</b> n’as plus de cartes : tu gagnes' : `${who(e.by)} n’a plus de cartes et gagne`;
     return '';
   }
   function renderTable(before) {
     const myTurn = room.phase === 'playing' && room.turn === state.me;
     const i = room.players.findIndex((p) => p.name === state.me);
     const many = room.players.length > 6;
-    const others = [...room.players.slice(i + 1), ...room.players.slice(0, Math.max(0, i))];
+    const others = i < 0 ? room.players : [...room.players.slice(i), ...room.players.slice(0, i)];
     const stack = Math.min(room.pile, 9);
     const newLog = room.log.length !== (before?.log?.length ?? room.log.length);
     const lastPlay = [...room.log].reverse().find((e) => e.t === 'play');
@@ -155,6 +156,7 @@ const Menteur = (() => {
     </section>`;
     bindHand();
     paintClock();
+    if (myTurn && before && before.turn !== state.me) Club.sfx?.click?.();
     if (room.reveal && room.reveal.id !== seenReveal) { seenReveal = room.reveal.id; showReveal(room.reveal); }
   }
   function handHtml(myTurn) {
@@ -162,6 +164,7 @@ const Menteur = (() => {
     const canCall = room.phase === 'playing' && room.last && room.last.by !== state.me;
     const status = room.phase !== 'playing' ? '' : !myTurn ? `C’est à <b>${esc(room.turn)}</b> de jouer${canCall ? ` · tu peux quand même accuser <b>${esc(room.last.by)}</b>` : ''}` : lead ? 'Choisis tes cartes, puis la valeur que tu annonces' : `Pose des <b>${PLURAL[room.rank]}</b>, vrais ou faux, ou accuse <b>${esc(room.last.by)}</b>`;
     return `<footer class="mt-me">
+      ${myTurn ? '<p class="mt-yours">À toi de jouer !</p>' : ''}
       <p class="mt-status">${status}<span class="mt-mine"><b class="js-clock-me"></b></span></p>
       ${lead ? `<div class="mt-ranks" role="radiogroup" aria-label="Valeur annoncée">${SHORT.map((r, k) => `<button type="button" role="radio" aria-checked="${chosenRank === k}" class="${chosenRank === k ? 'on' : ''}" data-rank="${k}">${r}</button>`).join('')}</div>` : ''}
       <div class="mt-hand ${myTurn ? '' : 'idle'}" style="--n:${room.hand.length}">${room.hand.map((c, k) => `<button type="button" class="mt-card ${selected.has(c) ? 'sel' : ''}" data-card="${c}" style="--k:${k}" aria-pressed="${selected.has(c)}" aria-label="${NAMES[rankOf(c)]} de ${['pique', 'cœur', 'carreau', 'trèfle'][Math.floor(c / 13)]}" ${myTurn ? '' : 'tabindex="-1"'}>${face(c)}</button>`).join('')}</div>

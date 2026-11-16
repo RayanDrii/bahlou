@@ -66,7 +66,7 @@ test('un joueur honnête accusé à tort : l’accusateur ramasse le tas', async
   assert.equal(r.reveal.lied, false);
   assert.equal(r.reveal.loser, 'bob');
   assert.equal(r.players[1].hand.length, 4);
-  assert.equal(r.players[r.turn].name, 'alice', 'celui qui avait raison ouvre');
+  assert.equal(r.players[r.turn].name, 'bob', 'le tour continue : celui qui devait jouer ouvre');
   assert.equal(r.lead, true);
 });
 
@@ -159,10 +159,11 @@ test('n’importe qui à la table peut crier Menteur, pas seulement le suivant',
   assert.equal((await s.call('liar', 'carl', { playId: id })).status, 200);
   assert.equal(r.reveal.caller, 'carl');
   assert.equal(r.reveal.loser, 'alice');
-  assert.equal(r.players[r.turn].name, 'carl', 'celui qui avait raison ouvre');
+  assert.equal(r.players[r.turn].name, 'bob', 'une accusation hors tour ne vole pas le tour de bob');
+  assert.equal(r.lead, true);
   // une accusation qui arrive après une nouvelle pose est refusée
-  await s.call('play', 'carl', { cards: [card(2)], rank: 0 });
-  await s.call('play', 'alice', { cards: [card(3)] });
+  await s.call('play', 'bob', { cards: [card(5)], rank: 3 });
+  await s.call('play', 'carl', { cards: [card(2)] });
   assert.equal((await s.call('liar', 'bob', { playId: id })).status, 409);
 });
 
@@ -178,4 +179,22 @@ test('la table monte à 13 joueurs, quatre cartes chacun', async () => {
   assert.ok(r.players.every(p => p.hand.length <= 4));
   for (let i = 0; i < 4000 && r.phase === 'playing'; i++) s.advance(46_000);
   assert.equal(r.phase, 'over');
+});
+
+test('dans une grande table, chaque joueur finit par avoir la main', async () => {
+  const s = setup();
+  const { data } = await s.call('create');
+  for (let i = 0; i < 12; i++) await s.call('bot');
+  await s.call('start');
+  const r = s.m.rooms.get(data.room.code);
+  r.settings.turn = 0;
+  let mine = 0;
+  for (let i = 0; i < 400 && r.phase === 'playing'; i++) {
+    if (r.players[r.turn].name === 'alice') {
+      mine++;
+      const p = r.players[r.turn];
+      await s.call('play', 'alice', r.lead ? { cards: [p.hand[0]], rank: p.hand[0] % 13 } : { cards: [p.hand[0]] });
+    } else s.advance(3000);
+  }
+  assert.ok(mine >= 1, 'le tour d’alice arrive');
 });

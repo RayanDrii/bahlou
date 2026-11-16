@@ -100,7 +100,7 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
     // un robot hors tour qui sait que l'annonce est impossible (il a les cartes) peut crier le premier
     r.outCall = null;
     const sure = r.players.filter(x => x.bot && x !== current(r) && x.name !== p.name && x.hand.filter(c => rankOf(c) === r.rank).length + cards.length > 4);
-    if (sure.length && random() < 0.6) r.outCall = { id: r.last.id, name: sure[Math.floor(random() * sure.length)].name, at: now() + 700 + Math.floor(random() * 900) };
+    if (sure.length && random() < 0.4) r.outCall = { id: r.last.id, name: sure[Math.floor(random() * sure.length)].name, at: now() + 700 + Math.floor(random() * 900) };
   }
   // n'importe qui à la table (sauf celui qui vient de poser) peut crier « Menteur ! » tant que personne n'a rejoué
   function liar(r, p, playId) {
@@ -118,8 +118,7 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
     removeFamilies(r, loser);
     if (!lied && !accused.hand.length) { win(r, by); return; }
     if (!loser.hand.length) { win(r, loser.name); return; }
-    // celui qui a eu raison ouvre le tour suivant
-    r.turn = r.players.indexOf(lied ? p : accused);
+    // le tour ne saute personne : celui qui devait jouer ouvre une nouvelle manche
     schedule(r);
   }
   const players = (r, name) => r.players.find(p => p.name === name);
@@ -141,7 +140,7 @@ module.exports = function createMenteur({ routes, send, readBody, broadcast, now
     }
     const claimed = r.last.count ?? r.last.cards.length, own = count[r.rank];
     const finishing = !players(r, r.last.by).hand.length;
-    const chance = own + claimed > 4 ? 1 : finishing ? 0.85 : Math.min(0.75, 0.1 + 0.12 * (claimed - 1) + 0.16 * own);
+    const chance = own + claimed > 4 ? 1 : finishing ? 0.85 : Math.min(0.55, 0.06 + 0.09 * (claimed - 1) + 0.13 * own);
     if (random() < chance) return { act: 'liar' };
     if (own) return { act: 'play', cards: pickRank(r.rank) };
     return { act: 'play', cards: junk(random() < 0.3 ? 2 : 1) };

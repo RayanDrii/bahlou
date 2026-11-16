@@ -76,6 +76,11 @@
 .ms-id { display: flex; align-items: center; gap: 8px; }
 .ms-id b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms-n { min-width: 28px; padding: 4px 6px; text-align: center; font: 900 18px/1 var(--display); color: #1a1204; background: #fff; }
+.ms.me { background: rgba(255, 255, 255, .1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35); }
+.ms.me.turn { box-shadow: inset 0 0 0 3px var(--acc); }
+.ms-id b em { font: 600 10px var(--mono); font-style: normal; text-transform: uppercase; color: var(--acc); }
+.mt-yours { margin: 0; padding: 6px 18px; font: 900 30px/1 var(--display); text-transform: uppercase; color: #1a1204; background: linear-gradient(180deg, #fff0b8, #e9bf5a 48%, #b98a2c); animation: mt-yours 1.2s ease-in-out infinite alternate; }
+@keyframes mt-yours { to { transform: scale(1.05); box-shadow: 0 0 22px rgba(255, 207, 110, .55); } }
 /* grande table (7 à 13) : des sièges compacts sur plusieurs rangées */
 .mt-seats.many { gap: 6px; }
 .mt-seats.many .ms { min-width: 0; width: 150px; padding: 8px 9px 10px; }
@@ -187,6 +192,6 @@
   .mt-btn.big { min-height: 52px; font-size: 23px; padding: 0 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .mr-card, .mr strong, .mr p, .mt-pile.drop i:last-child, .mt-call strong.mt-new { animation: none; }
+  .mt-yours, .mr-card, .mr strong, .mr p, .mt-pile.drop i:last-child, .mt-call strong.mt-new { animation: none; }
   .mr-card { transform: rotateY(180deg); }
 }
