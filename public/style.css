@@ -105,7 +105,7 @@ img { -webkit-user-drag: none; }
 .r-badge { font: 600 11px/1 var(--mono); padding: 5px 3px; background: var(--ink); color: var(--acc); }
 .r-dot { width: 7px; height: 7px; background: currentColor; }
 .top-me { flex: none; display: grid; place-items: center; height: 88px; background: var(--ink); }
-.top-me div { display: none; }
+.top-me > div { display: none; }
 .me-btn { flex: none; }
 
 /* ---------- portraits */

@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="/hub.css">
   <link rel="stylesheet" href="/menteur.css">
   <link rel="stylesheet" href="/messenger.css">
+  <link rel="stylesheet" href="/appearance.css">
 </head>
 <body>
   <!-- ===================================================== CONNEXION -->
@@ -214,6 +215,8 @@
       </label>
       <h2 id="profile-name"></h2>
       <div class="profile-actions">
+        <button type="button" class="row-btn" id="appearance-open">Personnaliser</button>
+        <button type="button" class="row-btn" id="public-profile-open">Voir mon profil public</button>
         <button type="button" class="row-btn" id="pfp-change">Changer le portrait</button>
         <button type="button" class="row-btn" id="pfp-remove">Retirer le portrait</button>
         <button type="button" class="row-btn" id="sound-toggle"><span id="sound-label">Sons activés</span></button>
@@ -231,6 +234,7 @@
   <div class="pops" id="pops"></div>
 
   <script src="/app.js"></script>
+  <script src="/appearance.js"></script>
   <script src="/fx.js"></script>
   <script src="/anim.js"></script>
   <script src="/icons.js"></script>

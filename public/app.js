@@ -66,6 +66,7 @@ function avatar(name, size = '', dot = false) {
     img.onerror = () => img.remove();
     el.appendChild(img);
   }
+  window.Appearance?.decorate(el, name);
   if (dot) {
     const d = document.createElement('span');
     d.className = 'dot' + (isOnline(name) ? ' on' : '');
@@ -216,6 +217,7 @@ async function start() {
 
   state.me = s.me;
   state.users = s.users;
+  Appearance.init();
   state.admin = !!s.admin;
   initConvs(s.last);
   $('#tab-admin').hidden = !state.admin;
@@ -583,6 +585,8 @@ function openProfile() {
   profile.hidden = false;
 }
 $('#me-btn').addEventListener('click', openProfile);
+$('#appearance-open').addEventListener('click', () => { profile.hidden = true; Appearance.openEditor(); });
+$('#public-profile-open').addEventListener('click', () => { profile.hidden = true; Appearance.openPublic(state.me); });
 $('#profile-close').addEventListener('click', () => (profile.hidden = true));
 profile.addEventListener('mousedown', (e) => { if (e.target === profile) profile.hidden = true; });
 $('#pfp-change').addEventListener('click', () => $('#profile-file').click());
@@ -666,14 +670,17 @@ function makeGroup(from) {
   el.className = 'group' + (me ? ' me' : '');
   const av = document.createElement('div');
   av.className = 'g-av';
-  if (!me) av.appendChild(avatar(from, 'sm'));
+  if (!me) {
+    av.appendChild(avatar(from, 'sm')); av.dataset.publicProfile = from; av.tabIndex = 0; av.setAttribute('role', 'button'); av.setAttribute('aria-label', 'Voir le profil de ' + from);
+  }
   const body = document.createElement('div');
   body.className = 'g-body';
   if (!me) {
     const u = userOf(from);
     const head = document.createElement('div');
     head.className = 'g-head';
-    const n = document.createElement('span');
+    const n = document.createElement('button');
+    n.type = 'button'; n.dataset.publicProfile = from;
     n.className = 'g-name' + (u.color ? ' ' + u.color : '');
     n.textContent = from;
     head.appendChild(n);
