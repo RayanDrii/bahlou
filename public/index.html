@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="/geo.css">
   <link rel="stylesheet" href="/hub.css">
   <link rel="stylesheet" href="/menteur.css">
+  <link rel="stylesheet" href="/messenger.css">
 </head>
 <body>
   <!-- ===================================================== CONNEXION -->
@@ -146,7 +147,18 @@
     <main class="work" id="work" hidden><div class="work-body" id="work-body"></div></main>
 
     <main class="chat" id="chat-view">
+      <aside class="inbox" aria-label="Conversations">
+        <header class="ib-head">
+          <h2>Discussions</h2>
+          <button type="button" class="ib-new" id="ib-new" title="Nouveau message privé" aria-label="Nouveau message privé"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/></svg></button>
+        </header>
+        <label class="ib-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input type="search" id="ib-q" placeholder="Rechercher ou démarrer une discussion" autocomplete="off" aria-label="Rechercher une discussion"></label>
+        <nav class="ib-list" id="conv-bar" aria-label="Conversations"></nav>
+      </aside>
+      <section class="pane">
       <header class="chat-head">
+        <button type="button" class="ch-back" id="ch-back" aria-label="Retour aux discussions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <span class="ch-av" id="ch-av"></span>
         <div class="chat-id">
           <h2>Le Salon</h2>
           <small id="chat-sub"></small>
@@ -156,7 +168,6 @@
         <button type="button" class="call-btn" id="call-btn">Appeler</button>
         <button type="button" class="txt-btn" id="toggle-members">Membres</button>
       </header>
-      <nav class="conv-bar" id="conv-bar" aria-label="Conversations"></nav>
 
       <section class="call" id="call" hidden><div id="call-body"></div></section>
 
@@ -178,9 +189,10 @@
         <button type="button" class="tool-btn" id="poll-btn" title="Créer un sondage" aria-label="Créer un sondage">?</button>
         <input type="file" accept="image/*" id="attach-file" hidden>
         <textarea id="input" rows="1" maxlength="2000" placeholder="Écrire au Salon" autocomplete="off"></textarea>
-        <button type="submit" class="send" id="send" disabled>Envoyer</button>
+        <button type="submit" class="send" id="send" disabled aria-label="Envoyer"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9Z"/></svg></button>
         <div class="emoji-pop" id="emoji-pop" hidden></div>
       </form>
+      </section>
     </main>
 
     <aside class="members" id="members">

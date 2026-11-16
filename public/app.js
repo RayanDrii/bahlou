@@ -19,6 +19,7 @@ const state = {
   reply: null,
   image: null,
   convs: {},   // messages privés : conv -> { other, unread, ts }
+  last: {},    // dernier message de chaque conversation, pour les aperçus
 };
 const QUICK = ['👍', '❤️', '😂', '😮', '🔥', '🎉'];
 const mobile = matchMedia('(max-width: 760px)');
@@ -340,6 +341,7 @@ function convOf(conv) {
   return state.convs[conv];
 }
 function initConvs(last = {}) {
+  state.last = { ...last };
   for (const [conv, m] of Object.entries(last)) {
     const c = convOf(conv);
     if (!c) continue;
@@ -354,23 +356,63 @@ function bumpUnread(conv) {
   updateTitle();
   renderConvs();
 }
+const IB_SALON = '<span class="ib-salon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.6 3.8c-.5.4-1.4.1-1.4-.6Z"/></svg></span>';
+function shortTime(ts) {
+  if (!ts) return '';
+  const now = Date.now();
+  if (sameDay(ts, now)) return fmtTime.format(ts);
+  if (sameDay(ts, now - 86400000)) return 'Hier';
+  return new Date(ts).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+function convPreview(conv) {
+  const m = state.last[conv];
+  if (!m) return conv === MAIN_CONV ? 'Le salon de tout le monde' : 'Dis bonjour 👋';
+  const text = msgPreview(m).replace(/\s+/g, ' ');
+  if (m.sys) return text.replace(/\*\*/g, '');
+  return (m.from === state.me ? 'Toi : ' : conv === MAIN_CONV ? `${m.from} : ` : '') + text;
+}
+let ibMode = 'list'; // 'list' ou 'new' (choisir un membre pour un nouveau message privé)
 function renderConvs() {
   const bar = $('#conv-bar');
   if (!bar) return;
-  const list = Object.entries(state.convs).sort((a, b) => b[1].ts - a[1].ts);
-  const badge = (n, on) => (n && !on ? `<i>${n}</i>` : '');
-  bar.innerHTML = `<button type="button" class="cv ${CONV === MAIN_CONV ? 'on' : ''}" data-conv="${MAIN_CONV}"><b>Salon</b>${badge(state.unread, CONV === MAIN_CONV)}</button>`
-    + list.map(([id, c]) => `<button type="button" class="cv ${id === CONV ? 'on' : ''}" data-conv="${esc(id)}"><span class="cv-av"></span><b>${esc(c.other)}</b>${badge(c.unread, id === CONV)}</button>`).join('')
-    + '<button type="button" class="cv cv-new" id="cv-new">+ Message privé</button>';
-  bar.querySelectorAll('[data-conv]').forEach((b) => {
-    b.onclick = () => openConv(b.dataset.conv);
-    const av = b.querySelector('.cv-av');
-    if (av) av.replaceWith(avatar(state.convs[b.dataset.conv].other, 'xs'));
-  });
-  $('#cv-new').onclick = () => { setMembers(true); toast('Choisis un membre pour lui écrire en privé.'); };
+  const q = ($('#ib-q')?.value || '').trim().toLowerCase();
+  const item = (conv, name, avHtml, unread, ts) => `<button type="button" class="ib-item ${conv === CONV ? 'on' : ''} ${unread && conv !== CONV ? 'unread' : ''}" data-conv="${esc(conv)}">
+      ${avHtml}<span class="ib-main"><span class="ib-top"><b>${esc(name)}</b><time>${shortTime(ts)}</time></span>
+      <span class="ib-bot"><span class="ib-prev">${esc(convPreview(conv))}</span>${unread && conv !== CONV ? `<i class="ib-badge">${unread > 99 ? '99+' : unread}</i>` : ''}</span></span></button>`;
+  let html = '';
+  if (ibMode === 'new') {
+    const people = state.users.filter((u) => u.name !== state.me && (!q || u.name.toLowerCase().includes(q)))
+      .sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
+    html = `<div class="ib-sec"><span>Nouvelle discussion</span><button type="button" class="ib-cancel" id="ib-cancel">Annuler</button></div>`
+      + (people.length ? people.map((u) => `<button type="button" class="ib-item ib-person" data-dm="${esc(u.name)}"><span class="ib-av" data-av="${esc(u.name)}"></span><span class="ib-main"><span class="ib-top"><b>${esc(u.name)}</b></span><span class="ib-bot"><span class="ib-prev ${u.online ? 'on' : ''}">${u.online ? 'En ligne' : 'Hors ligne'}</span></span></span></button>`).join('') : '<p class="ib-empty">Personne ne porte ce nom.</p>');
+  } else {
+    const dms = Object.entries(state.convs).filter(([, c]) => !q || c.other.toLowerCase().includes(q)).sort((a, b) => b[1].ts - a[1].ts);
+    const showSalon = !q || 'salon'.includes(q);
+    html = (showSalon ? item(MAIN_CONV, 'Le Salon', IB_SALON, state.unread, state.last[MAIN_CONV]?.ts) : '')
+      + (dms.length || !q ? '<div class="ib-sec"><span>Messages privés</span></div>' : '')
+      + dms.map(([id, c]) => item(id, c.other, `<span class="ib-av" data-av="${esc(c.other)}"></span>`, c.unread, c.ts || state.last[id]?.ts)).join('');
+    if (!dms.length && !q) html += '<p class="ib-empty">Aucun message privé pour l’instant. Appuie sur le crayon pour en écrire un.</p>';
+    if (q) {
+      const known = new Set(Object.values(state.convs).map((c) => c.other));
+      const others = state.users.filter((u) => u.name !== state.me && !known.has(u.name) && u.name.toLowerCase().includes(q));
+      if (others.length) html += '<div class="ib-sec"><span>Démarrer une discussion</span></div>' + others.map((u) => `<button type="button" class="ib-item ib-person" data-dm="${esc(u.name)}"><span class="ib-av" data-av="${esc(u.name)}"></span><span class="ib-main"><span class="ib-top"><b>${esc(u.name)}</b></span><span class="ib-bot"><span class="ib-prev">Nouveau message privé</span></span></span></button>`).join('');
+      if (!html.includes('ib-item')) html += '<p class="ib-empty">Aucune discussion ne correspond.</p>';
+    }
+  }
+  bar.innerHTML = html;
+  bar.querySelectorAll('[data-av]').forEach((n) => { const a = avatar(n.dataset.av, '', true); a.classList.add('ib-av'); n.replaceWith(a); });
+  bar.querySelectorAll('[data-conv]').forEach((b) => (b.onclick = () => openConv(b.dataset.conv)));
+  bar.querySelectorAll('[data-dm]').forEach((b) => (b.onclick = () => { ibMode = 'list'; $('#ib-q').value = ''; openConv(dmId(state.me, b.dataset.dm)); }));
+  const cancel = $('#ib-cancel');
+  if (cancel) cancel.onclick = () => { ibMode = 'list'; $('#ib-q').value = ''; renderConvs(); };
 }
+$('#ib-q').addEventListener('input', () => renderConvs());
+$('#ib-new').addEventListener('click', () => { ibMode = ibMode === 'new' ? 'list' : 'new'; $('#ib-q').value = ''; renderConvs(); if (ibMode === 'new') $('#ib-q').focus(); });
+$('#ch-back').addEventListener('click', () => $('#chat-view').classList.remove('in-conv'));
 function paintChatHead() {
   const c = convOf(CONV), h = $('.chat-id h2');
+  const av = $('#ch-av');
+  if (av) { if (c) av.replaceChildren(avatar(c.other, '', true)); else av.innerHTML = IB_SALON; }
   if (!c) {
     h.textContent = 'Le Salon';
     const on = state.users.filter((u) => u.online);
@@ -385,6 +427,7 @@ function paintChatHead() {
 }
 async function openConv(conv) {
   if (conv !== MAIN_CONV && !convOf(conv)) return;
+  $('#chat-view').classList.add('in-conv');
   if (conv !== CONV) {
     CONV = conv;
     state.messages = []; state.more = false; state.show = 70; state.newBelow = 0;
@@ -398,6 +441,7 @@ async function openConv(conv) {
 window.openConv = openConv;
 function onOtherConv(m) {
   const mine = m.from === state.me;
+  state.last[m.conv] = m;
   if (m.conv === MAIN_CONV) {
     if (!mine && !m.sys) { bumpUnread(MAIN_CONV); if (mentionsMe(m.text)) notify(m); }
     return;
@@ -412,7 +456,9 @@ function onOtherConv(m) {
 function onMessage(m) {
   if (m.conv !== CONV) return onOtherConv(m);
   if (state.messages.some((x) => x.id === m.id)) return;
-  if (CONV !== MAIN_CONV) { convOf(CONV).ts = m.ts; renderConvs(); }
+  state.last[m.conv] = m;
+  if (CONV !== MAIN_CONV) convOf(CONV).ts = m.ts;
+  renderConvs();
   state.messages.push(m);
   state.fresh.add(m.id);
   clearTyping(m.from);
