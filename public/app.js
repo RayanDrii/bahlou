@@ -231,7 +231,6 @@ async function start() {
   setInterval(Work.checkReminders, 30 * 60e3);
   if (s.alert) showAlert(s.alert);
   if (s.impersonatedBy) showTakeover(s);
-  if (s.takeovers?.length) showTakeoverNotice(s.takeovers);
   if ('Notification' in window && Notification.permission === 'default') {
     document.addEventListener('click', () => Notification.requestPermission(), { once: true });
   }
@@ -970,7 +969,7 @@ function fanfare() {
     });
   } catch {}
 }
-/* prise de main par un admin : un bandeau tant qu'elle dure, et le joueur est prévenu ensuite */
+/* prise de main par un admin : un bandeau tant qu'elle dure */
 function showTakeover(s) {
   const bar = document.createElement('div');
   bar.className = 'takeover';
@@ -984,15 +983,6 @@ function showTakeover(s) {
   document.querySelector('[data-tab="work"]')?.setAttribute('hidden', '');
   if (s.impersonationEnds) setTimeout(() => location.reload(), Math.max(0, s.impersonationEnds - Date.now()) + 1000);
 }
-function showTakeoverNotice(list) {
-  const when = (ts) => new Date(ts).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-  const wrap = document.createElement('div');
-  wrap.className = 'modal-wrap';
-  wrap.innerHTML = `<div class="modal takeover-note"><h2>Accès admin</h2><p>Un admin s’est connecté à ton compte :</p><ul>${list.map((t) => `<li><b>${esc(t.by)}</b>, le ${when(t.ts)}</li>`).join('')}</ul><button type="button" class="cta"><span class="cta-label">J’ai compris</span></button></div>`;
-  wrap.querySelector('button').onclick = () => { wrap.remove(); api('POST', '/api/takeovers/seen', {}).catch(() => {}); };
-  document.body.appendChild(wrap);
-}
-
 function showAlert(a) {
   if (!a || a.id <= store.get('alertSeen', 0)) return;
   document.querySelector('#alert-over')?.remove();

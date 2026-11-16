@@ -45,10 +45,6 @@ test('un admin prend la main sur un compte, sans l’onglet Travail ni ses droit
   assert.equal(back.cookie, boss, 'le cookie de l’admin revient');
   assert.equal((await request('/api/state', boss)).data.me, 'boss');
   assert.equal((await request('/api/state', as)).status, 401, 'la session de prise de main est fermée');
-  const seen = (await request('/api/state', zoe)).data;
-  assert.equal(seen.takeovers.length, 1);
-  assert.equal(seen.takeovers[0].by, 'boss');
-  await request('/api/takeovers/seen', zoe, {});
-  assert.equal((await request('/api/state', zoe)).data.takeovers, null);
+  assert.equal((await request('/api/state', zoe)).data.takeovers, undefined, 'le joueur n’est pas prévenu');
   assert.match(JSON.stringify((await request('/api/admin', boss)).data.log), /Prise de main sur le compte de zoe/);
 });

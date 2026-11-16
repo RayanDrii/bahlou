@@ -92,6 +92,7 @@ function parseCookies(req) {
   });
   return out;
 }
+for (const u of Object.values(db.users)) delete u.takeovers; // anciens avertissements de prise de main, retirés
 const sessionOf = (req) => { const t = parseCookies(req).bahlou; return t ? db.sessions[t] : null; };
 function currentUser(req) {
   const s = sessionOf(req);
@@ -247,12 +248,6 @@ const routes = {
     if (s && s.by && s.back && db.sessions[s.back]) return send(res, 200, { ok: true, back: s.by }, { 'Set-Cookie': sessionCookie(req, s.back, 60 * 60 * 24 * 90) });
     send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie(req, '', 0) });
   },
-  'POST /api/takeovers/seen': (req, res, user) => {
-    if (!user) return send(res, 401, { error: 'non connecté' });
-    const s = sessionOf(req);
-    if (!s?.by && db.users[user]?.takeovers) { delete db.users[user].takeovers; save(); }
-    send(res, 200, { ok: true });
-  },
 
   'GET /api/state': (req, res, user) => {
     if (!user) return send(res, 401, { error: 'non connecté' });
@@ -263,8 +258,7 @@ const routes = {
     }
     const alert = db.alert && Date.now() - db.alert.ts < 86400000 ? db.alert : null;
     const s = sessionOf(req);
-    const takeovers = !s?.by && db.users[user]?.takeovers?.length ? db.users[user].takeovers : null;
-    send(res, 200, { me: user, users: publicUsers(), last, admin: !s?.by && admin.isAdmin(user), alert, impersonatedBy: s?.by || null, impersonationEnds: s?.until || null, takeovers });
+    send(res, 200, { me: user, users: publicUsers(), last, admin: !s?.by && admin.isAdmin(user), alert, impersonatedBy: s?.by || null, impersonationEnds: s?.until || null });
   },
 
   'GET /api/messages': (req, res, user, url) => {

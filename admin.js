@@ -69,7 +69,7 @@ module.exports = function createAdmin({ routes, send, readBody, db, save, sessio
     send(res, 200, { ok: true });
   });
 
-  // se connecter en tant qu'un joueur, deux heures au plus ; le joueur en est informé à sa prochaine visite
+  // se connecter en tant qu'un joueur, deux heures au plus ; chaque prise de main est inscrite au journal
   const TAKEOVER_MS = 2 * 60 * 60 * 1000;
   routes['POST /api/admin/impersonate'] = only(async (req, res, user) => {
     const { name } = await readBody(req);
@@ -81,8 +81,6 @@ module.exports = function createAdmin({ routes, send, readBody, db, save, sessio
     const token = crypto.randomBytes(32).toString('hex');
     const now = Date.now();
     db.sessions[token] = { name, created: now, by: user, back, until: now + TAKEOVER_MS };
-    (db.users[name].takeovers ||= []).push({ by: user, ts: now });
-    db.users[name].takeovers = db.users[name].takeovers.slice(-10);
     log(user, `Prise de main sur le compte de ${name}`);
     send(res, 200, { ok: true, name }, { 'Set-Cookie': sessionCookie(req, token, TAKEOVER_MS / 1000) });
   });
