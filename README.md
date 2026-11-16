@@ -188,3 +188,31 @@ Pas de dépendance à installer. `node tests/geo.test.js` vérifie le moteur et
 comptes temporaires, puis les supprime. Aucun appel Google n'est effectué par ces
 tests. L'affichage et les déplacements Street View doivent être vérifiés avec une
 clé Google configurée avant mise en ligne. `npm test` lance l'ensemble des tests.
+
+## Personnalisation et profils
+
+**Mon profil → Personnaliser** propose quatre thèmes (Bahlou, Minuit, Forêt,
+Prune), une couleur d'accent et un fond du Salon importé depuis l'appareil.
+Ces réglages restent privés : ils sont conservés dans le navigateur, séparément
+pour chaque compte, et ne sont jamais envoyés au serveur. Ils ne se synchronisent
+pas entre appareils. Fermer sans enregistrer annule l'aperçu du thème ; « Revenir
+à Bahlou », puis « Enregistrer mon thème » rétablit l'apparence d'origine.
+
+Le profil public contient une bio de 190 caractères, une couleur ou image de
+bannière et une décoration d'avatar gratuite. Il est enregistré sur le serveur et
+visible par les membres connectés, depuis les noms et portraits des messages.
+Le bouton « Voir mon profil public » permet de le consulter soi-même. Les
+images sont réduites côté client ; les bannières JPEG sont limitées à 400 Ko et
+stockées par compte dans le répertoire d'avatars existant. Les cadres et autres
+objets de la boutique sont conservés.
+
+Le compte `armin.tocu`, cofondateur, bénéficie des droits administrateur côté
+serveur en plus des comptes présents dans `BAHLOU_ADMIN`. Aucun compte n'est créé
+et aucun mot de passe n'est modifié. Ces droits prennent effet uniquement après
+le déploiement du code et le redémarrage du serveur ; vérifier que le compte
+`armin.tocu` appartient bien au cofondateur avant cette mise en service.
+
+La personnalisation n'ajoute aucune dépendance serveur. `npm test` vérifie aussi
+les profils, l'isolation des réglages locaux, les validations et les droits
+administrateur. Déploiement par les scripts existants : les nouveaux fichiers
+navigateur sont inclus dans `public/`.

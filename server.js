@@ -162,7 +162,7 @@ function broadcast(event, data, onlyUsers = null) {
 
 function publicUsers() {
   const on = online();
-  return Object.entries(db.users).map(([name, u]) => ({ name, avatar: u.avatar || null, online: on.has(name), ...games.badge(name) }));
+  return Object.entries(db.users).map(([name, u]) => ({ name, avatar: u.avatar || null, online: on.has(name), profile: { bio: u.profile?.bio || '', bannerColor: u.profile?.bannerColor || '#ff4a1f', decoration: u.profile?.decoration || 'none', banner: u.profile?.banner || null }, ...games.badge(name) }));
 }
 
 // message automatique du Club dans le chat ("Club" ne peut pas être un pseudo : les pseudos sont en minuscules)
@@ -368,6 +368,32 @@ const routes = {
     send(res, 200, { ok: true });
   },
 
+  // Profil public : aucun réglage d'apparence privé n'est stocké ici.
+  'POST /api/profile': async (req, res, user) => {
+    if (!user) return send(res, 401, { error: 'non connecté' });
+    const b = await readBody(req, 600 * 1024);
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return send(res, 400, { error: 'Profil invalide.' });
+    const old = db.users[user].profile || {};
+    const bio = b.bio === undefined ? old.bio || '' : b.bio;
+    const color = b.bannerColor === undefined ? old.bannerColor || '#ff4a1f' : b.bannerColor;
+    const decoration = b.decoration === undefined ? old.decoration || 'none' : b.decoration;
+    if (typeof bio !== 'string' || bio.length > 190 || typeof color !== 'string' || !/^#[a-fA-F0-9]{6}$/.test(color) || !['none', 'halo', 'stars', 'crown', 'leaves'].includes(decoration)) return send(res, 400, { error: 'Bio : 190 caractères maximum. Couleur ou décoration invalide.' });
+    let banner = old.banner || null, bytes = null;
+    if (b.banner !== undefined && b.banner !== null) {
+      const match = typeof b.banner === 'string' && /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(b.banner);
+      if (!match) return send(res, 400, { error: 'La bannière doit être une image JPEG.' });
+      bytes = Buffer.from(match[1], 'base64');
+      if (bytes.length > 400 * 1024 || imageType(bytes) !== 'jpg') return send(res, 400, { error: 'Bannière invalide ou trop lourde (400 Ko maximum).' });
+      banner = Math.max(Date.now(), (Number(old.banner) || 0) + 1);
+    }
+    const file = path.join(AVATAR_DIR, user + '.banner.jpg');
+    if (bytes) fs.writeFileSync(file, bytes);
+    else if (b.banner === null) { fs.rmSync(file, { force: true }); banner = null; }
+    db.users[user].profile = { bio: bio.trim(), bannerColor: color.toLowerCase(), decoration, banner };
+    save(); broadcast('users', publicUsers());
+    send(res, 200, { profile: db.users[user].profile });
+  },
+
   'POST /api/avatar': async (req, res, user) => {
     if (!user) return send(res, 401, { error: 'non connecté' });
     const { image = null } = await readBody(req, 600 * 1024);
@@ -451,6 +477,15 @@ function serveStatic(req, res, url) {
   }
   const dl = /^\/download\/([^/]+)$/.exec(url.pathname);
   if (dl && Object.hasOwn(PACKAGES, dl[1])) return serveDownload(res, dl[1]);
+  const banner = /^\/banners\/([a-z0-9._-]{2,32})\.jpg$/.exec(url.pathname);
+  if (banner) {
+    if (!currentUser(req)) { res.writeHead(404); return res.end(); }
+    return fs.readFile(path.join(AVATAR_DIR, banner[1] + '.banner.jpg'), (err, data) => {
+      if (err) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, no-cache', 'X-Content-Type-Options': 'nosniff' });
+      res.end(data);
+    });
+  }
   const av = /^\/avatars\/([a-z0-9._-]{2,32})\.jpg$/.exec(url.pathname);
   if (av) {
     return fs.readFile(path.join(AVATAR_DIR, av[1] + '.jpg'), (err, data) => {
