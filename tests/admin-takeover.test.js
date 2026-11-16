@@ -48,3 +48,12 @@ test('un admin prend la main sur un compte, sans l’onglet Travail ni ses droit
   assert.equal((await request('/api/state', zoe)).data.takeovers, undefined, 'le joueur n’est pas prévenu');
   assert.match(JSON.stringify((await request('/api/admin', boss)).data.log), /Prise de main sur le compte de zoe/);
 });
+
+test('un admin donne des bahlous sans plafond', async t => {
+  const { request, register } = await launch(t);
+  const boss = await register('boss'); await register('zoe');
+  assert.equal((await request('/api/admin/coins', boss, { to: 'zoe', amount: 1_000_000_000_000 })).status, 200);
+  const zoe = (await request('/api/admin', boss)).data.players.find(p => p.name === 'zoe');
+  assert.ok(zoe.coins >= 1_000_000_000_000);
+  assert.equal((await request('/api/admin/coins', boss, { to: 'zoe', amount: 1e300 })).status, 400, 'au-delà de la précision des nombres');
+});

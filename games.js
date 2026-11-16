@@ -1315,7 +1315,7 @@ module.exports = function createGames({ db, routes, send, readBody, broadcast, s
   return {
     badge(name) { const p = g.players[name]; return p ? { level: levelOf(p.xp || 0), frame: p.frame || null, color: p.color || null, title: p.title ? shopItem(p.title).name : null } : { level: 1 }; },
     onChat(name) { progress(name, 'chat'); pushMe(name); },
-    adjust(name, amount) { const p = player(name); p.coins = Math.max(0, p.coins + amount); if (amount > 0) emit(name, { type: 'ach', name: 'Cadeau', d: 'Offert par le casino', reward: amount }); save(); pushMe(name); },
+    adjust(name, amount) { const p = player(name); p.coins = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, p.coins + amount)); if (amount > 0) emit(name, { type: 'ach', name: 'Cadeau', d: 'Offert par le casino', reward: amount }); save(); pushMe(name); },
     cosmetics(name) { const p = player(name); return p.owned.map((id) => { const it = shopItem(id); return it ? { id, type: it.type, name: it.name, on: p[it.type] === id } : null; }).filter(Boolean); },
     revoke(name, id) {
       const p = player(name), at = p.owned.indexOf(id);

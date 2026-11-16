@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const MAX_COINS = 100_000_000;
 
 module.exports = function createAdmin({ routes, send, readBody, db, save, sessionOf = () => null, sessionCookie = () => '', parseCookies = () => ({}), games, online, clients, broadcast, publicUsers, postSystem, hashPassword, dataDir }) {
   const admins = new Set((process.env.BAHLOU_ADMIN || '').split(',').map((s) => s.trim()).filter(Boolean));
@@ -37,7 +36,8 @@ module.exports = function createAdmin({ routes, send, readBody, db, save, sessio
   routes['POST /api/admin/coins'] = only(async (req, res, user) => {
     const { to = '', amount = 0 } = await readBody(req);
     const n = Math.trunc(Number(amount));
-    if (!Number.isFinite(n) || n === 0 || Math.abs(n) > MAX_COINS) return send(res, 400, { error: 'Montant invalide.' });
+    // pas de plafond : seule limite, la précision des nombres (9 millions de milliards)
+    if (!Number.isSafeInteger(n) || n === 0) return send(res, 400, { error: 'Montant invalide.' });
     let names;
     if (to === '@online') names = [...online()];
     else if (to === '@all') names = Object.keys(db.users);
