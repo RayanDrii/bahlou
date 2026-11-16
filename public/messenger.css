@@ -152,3 +152,25 @@
 .takeover b { font-weight: 800; }
 .takeover button { flex: none; padding: 9px 14px; border-radius: 10px; font-weight: 700; color: #fff; background: #1a1204; }
 @media (max-width: 760px) { .takeover { flex-direction: column; align-items: stretch; top: 62px; font-size: 13px; } }
+
+/* portraits ronds : les cadres de la boutique suivent le cercle */
+.chat .avatar[class*="f-"]::before, .members .avatar[class*="f-"]::before { border-radius: 50%; }
+.chat .f-void::before, .members .f-void::before { outline: 0; box-shadow: 0 0 0 2px var(--ivory); }
+/* pile des connectés dans l'en-tête : des pastilles nettes qui se chevauchent proprement */
+.facepile { align-items: center; }
+.facepile .avatar { width: 32px; height: 32px; margin-left: -9px; font-size: 12px; font-weight: 800; color: var(--ivory); background: #34343c; box-shadow: 0 0 0 2.5px var(--ms-panel, #16161a); }
+.facepile .avatar:first-child { margin-left: 0; }
+.facepile .avatar[class*="f-"]::before { display: none; } /* trop petits ici : les cadres restent visibles partout ailleurs */
+.facepile .more { margin-left: 8px; font: 600 12px var(--font, sans-serif); color: var(--ash); }
+
+/* télécharger les images envoyées */
+.msg-img-wrap { position: relative; display: inline-block; max-width: 100%; vertical-align: top; }
+.img-dl { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: rgba(0, 0, 0, .58); backdrop-filter: blur(4px); opacity: 0; transition: opacity .15s, background .15s; }
+.img-dl svg { width: 18px; height: 18px; }
+.msg-img-wrap:hover .img-dl, .img-dl:focus-visible { opacity: 1; }
+.img-dl:hover { background: var(--acc); }
+@media (hover: none) { .img-dl { opacity: 1; } }
+.lightbox { grid-template-rows: minmax(0, 1fr) auto; gap: 14px; }
+.lightbox img { border-radius: 8px; }
+.lb-dl { justify-self: center; display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; font-weight: 700; color: #fff; background: var(--acc); cursor: pointer; }
+.lb-dl svg { width: 18px; height: 18px; }

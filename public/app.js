@@ -703,7 +703,8 @@ function makeRow(m) {
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   const quote = m.reply ? `<button type="button" class="quote" data-to="${m.reply.id}"><b>${esc(m.reply.from)}</b><span>${esc(m.reply.text)}</span></button>` : '';
-  const image = m.image ? `<img class="msg-img" src="/uploads/${esc(m.image)}" alt="Image envoyée" loading="lazy">` : '';
+  const DL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>';
+  const image = m.image ? `<span class="msg-img-wrap"><img class="msg-img" src="/uploads/${esc(m.image)}" alt="Image envoyée" loading="lazy"><a class="img-dl" href="/uploads/${esc(m.image)}?dl=1" download="bahlou-${esc(m.image)}" title="Télécharger l’image" aria-label="Télécharger l’image">${DL}</a></span>` : '';
   bubble.innerHTML = quote + image + (m.poll ? pollHtml(m) : '') + format(m.text) + `<span class="stamp">${fmtTime.format(m.ts)}</span>`;
   bubble.title = new Date(m.ts).toLocaleString('fr-FR');
   row.appendChild(bubble);
@@ -855,7 +856,12 @@ box.addEventListener('click', (e) => {
   }
   const v = e.target.closest('[data-poll]');
   if (v) { api('POST', '/api/poll/vote', { conv: CONV, id: Number(v.dataset.poll), i: Number(v.dataset.i) }).catch((err) => toast(err.message, true)); return; }
-  if (e.target.matches('.msg-img')) { const l = $('#lightbox'); l.innerHTML = `<img src="${esc(e.target.src)}" alt="">`; l.hidden = false; }
+  if (e.target.matches('.msg-img')) {
+    const l = $('#lightbox'), src = e.target.getAttribute('src'), file = src.split('/').pop();
+    l.innerHTML = `<img src="${esc(src)}" alt=""><a class="lb-dl" href="${esc(src)}?dl=1" download="bahlou-${esc(file)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Télécharger</a>`;
+    l.querySelector('.lb-dl').addEventListener('click', (ev) => ev.stopPropagation());
+    l.hidden = false;
+  }
 });
 box.addEventListener('load', (e) => { if (e.target.matches?.('.msg-img') && box.scrollHeight - box.scrollTop - box.clientHeight < 500) box.scrollTop = box.scrollHeight; }, true);
 $('#lightbox').addEventListener('click', () => { $('#lightbox').hidden = true; });

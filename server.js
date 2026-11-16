@@ -443,7 +443,9 @@ function serveStatic(req, res, url) {
     if (!currentUser(req) || !UPLOAD_RE.test(up[1])) { res.writeHead(404); return res.end(); }
     return fs.readFile(path.join(UPLOAD_DIR, up[1]), (err, data) => {
       if (err) { res.writeHead(404); return res.end(); }
-      res.writeHead(200, { 'Content-Type': UPLOAD_MIME[up[1].split('.').pop()], 'Cache-Control': 'private, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
+      // ?dl=1 : le navigateur (ou l'appli de bureau) enregistre le fichier au lieu de l'afficher
+      const attach = url.searchParams.get('dl') === '1' ? { 'Content-Disposition': `attachment; filename="bahlou-${up[1]}"` } : {};
+      res.writeHead(200, { 'Content-Type': UPLOAD_MIME[up[1].split('.').pop()], 'Cache-Control': 'private, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', ...attach });
       res.end(data);
     });
   }
