@@ -159,8 +159,8 @@ const Club = (() => {
     el.type = 'button';
     el.className = 'msg-toast';
     el.appendChild(avatar(m.from, 'lg'));
-    const dm = m.conv && m.conv !== 'c:general';
-    el.insertAdjacentHTML('beforeend', `<div><small>${dm ? 'Message privé' : 'Nouveau message'}</small><b>${esc(m.from)}</b><p>${esc(m.text.slice(0, 140))}</p></div>`);
+    const dm = m.conv && m.conv !== 'c:general', grp = m.conv?.startsWith('g:') ? state.groups?.[m.conv] : null;
+    el.insertAdjacentHTML('beforeend', `<div><small>${grp ? esc(grp.name) : dm ? 'Message privé' : 'Nouveau message'}</small><b>${esc(m.from)}</b><p>${esc(m.text.slice(0, 140))}</p></div>`);
     el.onclick = () => { if (window.openConv) window.openConv(m.conv || 'c:general'); else location.hash = '#/chat'; el.remove(); };
     let box = $('#msg-toasts');
     if (!box) { box = Object.assign(document.createElement('div'), { id: 'msg-toasts' }); document.body.appendChild(box); }

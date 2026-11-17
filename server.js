@@ -143,8 +143,10 @@ function dmUsers(conv) {
   if (!m || m[1] >= m[2] || !Object.hasOwn(db.users, m[1]) || !Object.hasOwn(db.users, m[2])) return null;
   return [m[1], m[2]];
 }
-function canAccess(user, conv) { return conv === MAIN || !!dmUsers(conv)?.includes(user); }
-function participants(conv) { return conv === MAIN ? null : dmUsers(conv); }
+// groupes : « g:<id> », un nom et une liste de membres
+const groupOf = (conv) => { const m = /^g:([a-f0-9]{12})$/.exec(String(conv)); return m && db.groups?.[m[1]] ? db.groups[m[1]] : null; };
+function canAccess(user, conv) { return conv === MAIN || !!dmUsers(conv)?.includes(user) || !!groupOf(conv)?.members.includes(user); }
+function participants(conv) { return conv === MAIN ? null : groupOf(conv)?.members.slice() || dmUsers(conv); }
 
 // ---------------------------------------------------------------- temps réel (WebSocket : les tunnels gratuits ne laissent pas passer les flux SSE)
 const clients = new Set(); // { user, send, close }
@@ -201,8 +203,94 @@ function pushMessage(list, msg, conv) {
   broadcast('message', msg, participants(conv));
 }
 
+// ---------------------------------------------------------------- groupes
+const MAX_GROUP = 50;
+const groupView = (id) => { const g = db.groups[id]; return { id: 'g:' + id, name: g.name, members: g.members, owner: g.owner, created: g.created }; };
+const myGroups = (user) => Object.keys(db.groups || {}).filter((id) => db.groups[id].members.includes(user)).map(groupView);
+function groupNote(id, text) {
+  const conv = 'g:' + id, msg = { id: ++db.seq, conv, from: 'Club', sys: true, text, ts: Date.now() };
+  pushMessage((db.messages[conv] ||= []), msg, conv);
+}
+function cleanName(v) { return String(v || '').replace(/\s+/g, ' ').trim().slice(0, 40); }
+function validMembers(list, user) {
+  const out = [...new Set((Array.isArray(list) ? list : []).map(String))].filter((n) => n !== user && Object.hasOwn(db.users, n) && !db.users[n].banned);
+  return out;
+}
+function castGroup(id, extra = []) {
+  const g = db.groups[id];
+  if (g) broadcast('group', groupView(id), g.members);
+  if (extra.length) broadcast('group', { id: 'g:' + id, gone: true }, extra);
+}
+function dropGroup(id) {
+  const conv = 'g:' + id;
+  for (const m of db.messages[conv] || []) if (m.image) fs.rmSync(path.join(UPLOAD_DIR, m.image), { force: true });
+  delete db.messages[conv];
+  delete db.groups[id];
+}
+function leaveGroup(id, name) {
+  const g = db.groups[id];
+  g.members = g.members.filter((n) => n !== name);
+  if (!g.members.length) { dropGroup(id); save(); return; }
+  if (g.owner === name) g.owner = g.members[0];
+  groupNote(id, `**${name}** a quitté le groupe`);
+  castGroup(id, [name]);
+}
+const groupRoutes = {
+  'POST /api/groups': async (req, res, user) => {
+    if (!user) return send(res, 401, { error: 'non connecté' });
+    const b = await readBody(req);
+    const name = cleanName(b.name), members = validMembers(b.members, user);
+    if (!name) return send(res, 400, { error: 'Donne un nom au groupe.' });
+    if (!members.length) return send(res, 400, { error: 'Ajoute au moins une personne.' });
+    if (members.length + 1 > MAX_GROUP) return send(res, 400, { error: `${MAX_GROUP} membres au maximum.` });
+    db.groups ||= {};
+    if (Object.values(db.groups).filter((g) => g.owner === user).length >= 30) return send(res, 429, { error: 'Tu as déjà créé beaucoup de groupes.' });
+    let id; do { id = crypto.randomBytes(6).toString('hex'); } while (db.groups[id]);
+    db.groups[id] = { name, members: [user, ...members], owner: user, created: Date.now() };
+    groupNote(id, `**${user}** a créé le groupe « ${name} »`);
+    castGroup(id);
+    send(res, 200, { group: groupView(id) });
+  },
+  'POST /api/groups/update': async (req, res, user) => {
+    if (!user) return send(res, 401, { error: 'non connecté' });
+    const b = await readBody(req);
+    const id = String(b.id || '').replace(/^g:/, ''), g = db.groups?.[id];
+    if (!g || !g.members.includes(user)) return send(res, 404, { error: 'Groupe introuvable.' });
+    if (b.name !== undefined) {
+      const name = cleanName(b.name);
+      if (!name) return send(res, 400, { error: 'Le nom ne peut pas être vide.' });
+      if (name !== g.name) { g.name = name; groupNote(id, `**${user}** a renommé le groupe en « ${name} »`); }
+    }
+    if (b.add !== undefined) {
+      const add = validMembers(b.add, user).filter((n) => !g.members.includes(n));
+      if (g.members.length + add.length > MAX_GROUP) return send(res, 400, { error: `${MAX_GROUP} membres au maximum.` });
+      if (add.length) { g.members.push(...add); groupNote(id, `**${user}** a ajouté ${add.map((n) => `**${n}**`).join(', ')}`); }
+    }
+    let removed = [];
+    if (b.remove !== undefined) {
+      const who = String(b.remove);
+      if (g.owner !== user) return send(res, 403, { error: 'Seul le créateur du groupe peut retirer quelqu’un.' });
+      if (who === user || !g.members.includes(who)) return send(res, 400, { error: 'Impossible de retirer cette personne.' });
+      g.members = g.members.filter((n) => n !== who); removed = [who];
+      groupNote(id, `**${user}** a retiré **${who}**`);
+    }
+    save();
+    castGroup(id, removed);
+    send(res, 200, { group: groupView(id) });
+  },
+  'POST /api/groups/leave': async (req, res, user) => {
+    if (!user) return send(res, 401, { error: 'non connecté' });
+    const b = await readBody(req);
+    const id = String(b.id || '').replace(/^g:/, ''), g = db.groups?.[id];
+    if (!g || !g.members.includes(user)) return send(res, 404, { error: 'Groupe introuvable.' });
+    leaveGroup(id, user);
+    send(res, 200, { ok: true });
+  },
+};
+
 // ---------------------------------------------------------------- routes API
 const routes = {
+  ...groupRoutes,
   'GET /api/me': (req, res, user) => send(res, 200, { user }),
 
   'POST /api/register': async (req, res) => {
@@ -258,7 +346,7 @@ const routes = {
     }
     const alert = db.alert && Date.now() - db.alert.ts < 86400000 ? db.alert : null;
     const s = sessionOf(req);
-    send(res, 200, { me: user, users: publicUsers(), last, admin: !s?.by && admin.isAdmin(user), alert, impersonatedBy: s?.by || null, impersonationEnds: s?.until || null });
+    send(res, 200, { me: user, users: publicUsers(), last, groups: myGroups(user), admin: !s?.by && admin.isAdmin(user), alert, impersonatedBy: s?.by || null, impersonationEnds: s?.until || null });
   },
 
   'GET /api/messages': (req, res, user, url) => {
@@ -604,6 +692,7 @@ process.on('SIGUSR2', () => {
     if (typeof cmd.removeTestUser === 'string' && /^test\.[a-z0-9]{1,24}$/.test(cmd.removeTestUser)) {
       const gone = cmd.removeTestUser;
       delete db.users[gone];
+      for (const id of Object.keys(db.groups || {})) if (db.groups[id].members.includes(gone)) leaveGroup(id, gone);
       for (const [t, s] of Object.entries(db.sessions)) if (s.name === gone) delete db.sessions[t];
       for (const c of clients) if (c.user === gone) c.close();
       delete db.games?.players?.[gone];

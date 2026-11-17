@@ -57,3 +57,29 @@ test('un admin donne des bahlous sans plafond', async t => {
   assert.ok(zoe.coins >= 1_000_000_000_000);
   assert.equal((await request('/api/admin/coins', boss, { to: 'zoe', amount: 1e300 })).status, 400, 'au-delà de la précision des nombres');
 });
+
+test('groupes : création, messages réservés aux membres, renommer, ajouter, retirer, quitter', async t => {
+  const { request, register } = await launch(t);
+  const ana = await register('ana'), ben = await register('ben'), cam = await register('cam'), dan = await register('dan');
+  assert.equal((await request('/api/groups', ana, { name: '', members: ['ben'] })).status, 400);
+  assert.equal((await request('/api/groups', ana, { name: 'Potes', members: [] })).status, 400);
+  const g = (await request('/api/groups', ana, { name: '  Les   potes ', members: ['ben', 'cam', 'inconnu', 'ana'] })).data.group;
+  assert.equal(g.name, 'Les potes');
+  assert.deepEqual(g.members, ['ana', 'ben', 'cam']);
+  assert.equal(g.owner, 'ana');
+  assert.equal((await request('/api/messages', ben, { conv: g.id, text: 'salut le groupe' })).status, 200);
+  assert.equal((await request('/api/messages', dan, { conv: g.id, text: 'je m’incruste' })).status, 403, 'un non-membre ne peut pas écrire');
+  assert.equal((await request(`/api/messages?conv=${g.id}`, dan)).status, 403, 'ni lire');
+  const read = (await request(`/api/messages?conv=${g.id}`, cam)).data.messages;
+  assert.ok(read.some(m => m.text === 'salut le groupe'));
+  assert.ok(read.some(m => m.sys && /créé le groupe/.test(m.text)));
+  assert.equal((await request('/api/state', cam)).data.groups[0].id, g.id);
+  assert.equal((await request('/api/state', dan)).data.groups.length, 0);
+  assert.equal((await request('/api/groups/update', ben, { id: g.id, name: 'Team 21h' })).data.group.name, 'Team 21h');
+  assert.deepEqual((await request('/api/groups/update', ben, { id: g.id, add: ['dan'] })).data.group.members, ['ana', 'ben', 'cam', 'dan']);
+  assert.equal((await request('/api/groups/update', ben, { id: g.id, remove: 'cam' })).status, 403, 'seul le créateur retire');
+  assert.deepEqual((await request('/api/groups/update', ana, { id: g.id, remove: 'cam' })).data.group.members, ['ana', 'ben', 'dan']);
+  assert.equal((await request(`/api/messages?conv=${g.id}`, cam)).status, 403, 'retiré : plus d’accès');
+  assert.equal((await request('/api/groups/leave', ana, { id: g.id })).status, 200);
+  assert.equal((await request('/api/state', ben)).data.groups[0].owner, 'ben', 'le créateur parti, un autre membre reprend');
+});

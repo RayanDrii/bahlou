@@ -20,6 +20,7 @@ const state = {
   image: null,
   convs: {},   // messages privés : conv -> { other, unread, ts }
   last: {},    // dernier message de chaque conversation, pour les aperçus
+  groups: {},  // groupes dont je suis membre : 'g:<id>' -> { id, name, members, owner }
 };
 const QUICK = ['👍', '❤️', '😂', '😮', '🔥', '🎉'];
 const mobile = matchMedia('(max-width: 760px)');
@@ -217,6 +218,7 @@ async function start() {
   state.me = s.me;
   state.users = s.users;
   state.admin = !!s.admin;
+  setGroups(s.groups);
   initConvs(s.last);
   $('#tab-admin').hidden = !state.admin;
   $('#auth').hidden = true;
@@ -311,6 +313,7 @@ function connect() {
     const m = state.messages.find((x) => x.id === id);
     if (m) { m.reactions = reactions; renderMessages('keep'); }
   });
+  es.addEventListener('group', (e) => onGroup(JSON.parse(e.data)));
   es.addEventListener('delete', (e) => {
     const { id } = JSON.parse(e.data);
     state.messages = state.messages.filter((x) => x.id !== id);
@@ -321,6 +324,7 @@ async function resync() {
   try {
     const s = await api('GET', '/api/state');
     state.users = s.users;
+    setGroups(s.groups);
     renderPeople();
     await loadMessages();
     await Club.refresh();
@@ -334,12 +338,116 @@ async function resync() {
 const dmId = (a, b) => 'd:' + [a, b].sort().join('|');
 function convOf(conv) {
   if (conv === MAIN_CONV) return null;
+  if (conv.startsWith('g:')) {
+    const g = state.groups[conv];
+    if (!g) return null;
+    const c = (state.convs[conv] ||= { unread: 0, ts: g.created || 0 });
+    return Object.assign(c, { group: g, name: g.name, other: null });
+  }
   if (!state.convs[conv]) {
     const [a, b] = conv.slice(2).split('|');
     if (a !== state.me && b !== state.me) return null;
-    state.convs[conv] = { other: a === state.me ? b : a, unread: 0, ts: 0 };
+    const other = a === state.me ? b : a;
+    state.convs[conv] = { other, name: other, unread: 0, ts: 0 };
   }
   return state.convs[conv];
+}
+
+/* ============================================================ groupes */
+function setGroups(list = []) {
+  const keep = new Set(list.map((g) => g.id));
+  for (const id of Object.keys(state.groups)) if (!keep.has(id)) { delete state.groups[id]; delete state.convs[id]; }
+  for (const g of list) { state.groups[g.id] = g; convOf(g.id); }
+}
+function onGroup(g) {
+  if (g.gone) {
+    delete state.groups[g.id]; delete state.convs[g.id]; delete state.last[g.id];
+    if (CONV === g.id) { toast('Tu ne fais plus partie de ce groupe.'); openConv(MAIN_CONV); }
+    $('#group-modal')?.remove();
+    renderConvs(); return;
+  }
+  const isNew = !state.groups[g.id];
+  state.groups[g.id] = g; convOf(g.id);
+  if (isNew && g.owner !== state.me) toast(`Tu as été ajouté au groupe « ${g.name} ».`);
+  if (CONV === g.id) paintChatHead();
+  if ($('#group-modal')?.dataset.id === g.id) openGroupModal(g.id);
+  renderConvs();
+}
+const GROUP_TONES = ['#ff4a1f', '#6f9bff', '#3fdc8e', '#c79bff', '#ffd21f', '#ff6fae', '#4fe3e3'];
+function groupAv(g) {
+  const tone = GROUP_TONES[[...g.name].reduce((t, ch) => t + ch.charCodeAt(0), 0) % GROUP_TONES.length];
+  const letters = g.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  return `<span class="ib-group" style="--g:${tone}" aria-hidden="true">${esc(letters)}</span>`;
+}
+function memberPicker(exclude, selected) {
+  const people = state.users.filter((u) => u.name !== state.me && !exclude.includes(u.name)).sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
+  if (!people.length) return '<p class="gm-empty">Tout le monde est déjà dans le groupe.</p>';
+  return `<input type="search" class="gm-q" placeholder="Rechercher un membre" aria-label="Rechercher un membre"><div class="gm-people">${people.map((u) => `<label class="gm-person" data-n="${esc(u.name.toLowerCase())}"><input type="checkbox" value="${esc(u.name)}" ${selected.includes(u.name) ? 'checked' : ''}><span class="gm-av" data-av="${esc(u.name)}"></span><b>${esc(u.name)}</b><small class="${u.online ? 'on' : ''}">${u.online ? 'En ligne' : 'Hors ligne'}</small><i class="gm-check"></i></label>`).join('')}</div>`;
+}
+function wirePicker(root, onChange) {
+  root.querySelectorAll('[data-av]').forEach((n) => { const a = avatar(n.dataset.av, 'sm', true); n.replaceWith(a); });
+  const q = root.querySelector('.gm-q');
+  if (q) q.oninput = () => root.querySelectorAll('.gm-person').forEach((l) => { l.hidden = !l.dataset.n.includes(q.value.trim().toLowerCase()); });
+  root.querySelectorAll('.gm-person input').forEach((c) => (c.onchange = onChange));
+}
+const picked = (root) => [...root.querySelectorAll('.gm-person input:checked')].map((c) => c.value);
+function groupShell(id, html) {
+  $('#group-modal')?.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-wrap';
+  wrap.id = 'group-modal';
+  if (id) wrap.dataset.id = id;
+  wrap.innerHTML = `<div class="modal gm">${html}</div>`;
+  wrap.addEventListener('click', (e) => { if (e.target === wrap || e.target.closest('[data-close]')) wrap.remove(); });
+  document.body.appendChild(wrap);
+  return wrap;
+}
+function openNewGroup() {
+  const wrap = groupShell(null, `<header class="gm-h"><h2>Nouveau groupe</h2><button type="button" class="gm-x" data-close aria-label="Fermer">×</button></header>
+    <label class="gm-field"><span>Nom du groupe</span><input id="gm-name" maxlength="40" placeholder="Ex. Team 21h" autocomplete="off"></label>
+    <div class="gm-sec"><span>Membres</span><em id="gm-count">0 sélectionné</em></div>${memberPicker([], [])}
+    <p class="gm-err" id="gm-err" role="alert"></p>
+    <button type="button" class="gm-go" id="gm-create" disabled>Créer le groupe</button>`);
+  const name = wrap.querySelector('#gm-name'), go = wrap.querySelector('#gm-create');
+  const paint = () => { const n = picked(wrap).length; wrap.querySelector('#gm-count').textContent = `${n} sélectionné${n > 1 ? 's' : ''}`; go.disabled = !name.value.trim() || !n; };
+  wirePicker(wrap, paint);
+  name.oninput = paint;
+  name.focus();
+  go.onclick = async () => {
+    go.disabled = true;
+    try {
+      const { group } = await api('POST', '/api/groups', { name: name.value, members: picked(wrap) });
+      state.groups[group.id] = group; convOf(group.id);
+      wrap.remove(); ibMode = 'list'; $('#ib-q').value = '';
+      openConv(group.id);
+    } catch (e) { wrap.querySelector('#gm-err').textContent = e.message; paint(); }
+  };
+}
+function openGroupModal(id) {
+  const g = state.groups[id];
+  if (!g) return;
+  const owner = g.owner === state.me;
+  const wrap = groupShell(id, `<header class="gm-h"><span class="gm-big">${groupAv(g)}</span><h2>${esc(g.name)}</h2><button type="button" class="gm-x" data-close aria-label="Fermer">×</button></header>
+    <label class="gm-field"><span>Nom du groupe</span><span class="gm-row"><input id="gm-name" maxlength="40" value="${esc(g.name)}" autocomplete="off"><button type="button" class="gm-small" id="gm-rename">Renommer</button></span></label>
+    <div class="gm-sec"><span>${g.members.length} membres</span></div>
+    <div class="gm-members">${g.members.map((n) => `<div class="gm-member"><span class="gm-av" data-av="${esc(n)}"></span><b>${esc(n === state.me ? n + ' (toi)' : n)}</b>${n === g.owner ? '<em>Créateur</em>' : ''}${owner && n !== state.me ? `<button type="button" class="gm-small danger" data-rm="${esc(n)}">Retirer</button>` : ''}</div>`).join('')}</div>
+    <details class="gm-add"><summary>Ajouter des membres</summary>${memberPicker(g.members, [])}<button type="button" class="gm-go" id="gm-add" disabled>Ajouter</button></details>
+    <p class="gm-err" id="gm-err" role="alert"></p>
+    <button type="button" class="gm-leave" id="gm-leave">Quitter le groupe</button>`);
+  const err = (e) => { wrap.querySelector('#gm-err').textContent = e.message; };
+  const add = wrap.querySelector('#gm-add');
+  wirePicker(wrap, () => { if (add) add.disabled = !picked(wrap).length; });
+  wrap.querySelector('#gm-rename').onclick = () => api('POST', '/api/groups/update', { id, name: wrap.querySelector('#gm-name').value }).catch(err);
+  if (add) add.onclick = () => api('POST', '/api/groups/update', { id, add: picked(wrap) }).catch(err);
+  wrap.querySelectorAll('[data-rm]').forEach((b) => (b.onclick = () => {
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Confirmer'; return; }
+    api('POST', '/api/groups/update', { id, remove: b.dataset.rm }).catch(err);
+  }));
+  const leave = wrap.querySelector('#gm-leave');
+  leave.onclick = async () => {
+    if (!leave.dataset.armed) { leave.dataset.armed = '1'; leave.textContent = 'Clique encore pour quitter'; return; }
+    try { await api('POST', '/api/groups/leave', { id }); wrap.remove(); onGroup({ id, gone: true }); } catch (e) { err(e); }
+  };
 }
 function initConvs(last = {}) {
   state.last = { ...last };
@@ -370,7 +478,7 @@ function convPreview(conv) {
   if (!m) return conv === MAIN_CONV ? 'Le salon de tout le monde' : 'Dis bonjour 👋';
   const text = msgPreview(m).replace(/\s+/g, ' ');
   if (m.sys) return text.replace(/\*\*/g, '');
-  return (m.from === state.me ? 'Toi : ' : conv === MAIN_CONV ? `${m.from} : ` : '') + text;
+  return (m.from === state.me ? 'Toi : ' : conv === MAIN_CONV || conv.startsWith('g:') ? `${m.from} : ` : '') + text;
 }
 let ibMode = 'list'; // 'list' ou 'new' (choisir un membre pour un nouveau message privé)
 function renderConvs() {
@@ -385,16 +493,18 @@ function renderConvs() {
     const people = state.users.filter((u) => u.name !== state.me && (!q || u.name.toLowerCase().includes(q)))
       .sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
     html = `<div class="ib-sec"><span>Nouvelle discussion</span><button type="button" class="ib-cancel" id="ib-cancel">Annuler</button></div>`
+      + `<button type="button" class="ib-item ib-newgroup" id="ib-newgroup"><span class="ib-group" style="--g:var(--acc)" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20c0-3.6 3.1-6 7-6s7 2.4 7 6v1H2Zm15.5 1v-1c0-2-.8-3.7-2.1-5 .5-.1 1-.1 1.6-.1 3.3 0 6 2 6 5.1v1Z"/></svg></span><span class="ib-main"><span class="ib-top"><b>Nouveau groupe</b></span><span class="ib-bot"><span class="ib-prev">Plusieurs personnes, un nom</span></span></span></button>`
+      + `<div class="ib-sec"><span>Message privé</span></div>`
       + (people.length ? people.map((u) => `<button type="button" class="ib-item ib-person" data-dm="${esc(u.name)}"><span class="ib-av" data-av="${esc(u.name)}"></span><span class="ib-main"><span class="ib-top"><b>${esc(u.name)}</b></span><span class="ib-bot"><span class="ib-prev ${u.online ? 'on' : ''}">${u.online ? 'En ligne' : 'Hors ligne'}</span></span></span></button>`).join('') : '<p class="ib-empty">Personne ne porte ce nom.</p>');
   } else {
-    const dms = Object.entries(state.convs).filter(([, c]) => !q || c.other.toLowerCase().includes(q)).sort((a, b) => b[1].ts - a[1].ts);
+    const dms = Object.entries(state.convs).filter(([, c]) => !q || c.name.toLowerCase().includes(q)).sort((a, b) => (b[1].ts || state.last[b[0]]?.ts || 0) - (a[1].ts || state.last[a[0]]?.ts || 0));
     const showSalon = !q || 'salon'.includes(q);
     html = (showSalon ? item(MAIN_CONV, 'Le Salon', IB_SALON, state.unread, state.last[MAIN_CONV]?.ts) : '')
-      + (dms.length || !q ? '<div class="ib-sec"><span>Messages privés</span></div>' : '')
-      + dms.map(([id, c]) => item(id, c.other, `<span class="ib-av" data-av="${esc(c.other)}"></span>`, c.unread, c.ts || state.last[id]?.ts)).join('');
-    if (!dms.length && !q) html += '<p class="ib-empty">Aucun message privé pour l’instant. Appuie sur le crayon pour en écrire un.</p>';
+      + (dms.length || !q ? '<div class="ib-sec"><span>Messages privés et groupes</span></div>' : '')
+      + dms.map(([id, c]) => item(id, c.name, c.group ? groupAv(c.group) : `<span class="ib-av" data-av="${esc(c.other)}"></span>`, c.unread, Math.max(c.ts || 0, state.last[id]?.ts || 0))).join('');
+    if (!dms.length && !q) html += '<p class="ib-empty">Aucune discussion pour l’instant. Appuie sur le crayon pour écrire à quelqu’un ou créer un groupe.</p>';
     if (q) {
-      const known = new Set(Object.values(state.convs).map((c) => c.other));
+      const known = new Set(Object.values(state.convs).map((c) => c.other).filter(Boolean));
       const others = state.users.filter((u) => u.name !== state.me && !known.has(u.name) && u.name.toLowerCase().includes(q));
       if (others.length) html += '<div class="ib-sec"><span>Démarrer une discussion</span></div>' + others.map((u) => `<button type="button" class="ib-item ib-person" data-dm="${esc(u.name)}"><span class="ib-av" data-av="${esc(u.name)}"></span><span class="ib-main"><span class="ib-top"><b>${esc(u.name)}</b></span><span class="ib-bot"><span class="ib-prev">Nouveau message privé</span></span></span></button>`).join('');
       if (!html.includes('ib-item')) html += '<p class="ib-empty">Aucune discussion ne correspond.</p>';
@@ -404,6 +514,8 @@ function renderConvs() {
   bar.querySelectorAll('[data-av]').forEach((n) => { const a = avatar(n.dataset.av, '', true); a.classList.add('ib-av'); n.replaceWith(a); });
   bar.querySelectorAll('[data-conv]').forEach((b) => (b.onclick = () => openConv(b.dataset.conv)));
   bar.querySelectorAll('[data-dm]').forEach((b) => (b.onclick = () => { ibMode = 'list'; $('#ib-q').value = ''; openConv(dmId(state.me, b.dataset.dm)); }));
+  const ng = $('#ib-newgroup');
+  if (ng) ng.onclick = openNewGroup;
   const cancel = $('#ib-cancel');
   if (cancel) cancel.onclick = () => { ibMode = 'list'; $('#ib-q').value = ''; renderConvs(); };
 }
@@ -413,7 +525,23 @@ $('#ch-back').addEventListener('click', () => $('#chat-view').classList.remove('
 function paintChatHead() {
   const c = convOf(CONV), h = $('.chat-id h2');
   const av = $('#ch-av');
-  if (av) { if (c) av.replaceChildren(avatar(c.other, '', true)); else av.innerHTML = IB_SALON; }
+  if (av) { if (c?.group) av.innerHTML = groupAv(c.group); else if (c) av.replaceChildren(avatar(c.other, '', true)); else av.innerHTML = IB_SALON; }
+  let gb = $('#group-btn');
+  if (!gb) {
+    gb = Object.assign(document.createElement('button'), { type: 'button', id: 'group-btn', className: 'group-btn', textContent: 'Infos du groupe' });
+    gb.onclick = () => { if (CONV.startsWith('g:')) openGroupModal(CONV); };
+    $('#toggle-members').before(gb);
+  }
+  gb.hidden = !c?.group;
+  $('#chat-view').classList.toggle('is-group', !!c?.group);
+  if (c?.group) {
+    h.textContent = c.group.name;
+    const others = c.group.members.filter((n) => n !== state.me);
+    $('#chat-sub').textContent = `${c.group.members.length} membres · ${['Toi', ...others].join(', ')}`;
+    $('#input').placeholder = `Écrire dans ${c.group.name}`;
+    $('#chat-view').classList.remove('is-dm');
+    return;
+  }
   if (!c) {
     h.textContent = 'Le Salon';
     const on = state.users.filter((u) => u.online);
@@ -450,7 +578,7 @@ function onOtherConv(m) {
   const c = convOf(m.conv);
   if (!c) return;
   c.ts = m.ts;
-  if (!mine) { bumpUnread(m.conv); notify(m); if (!document.hidden) Club.peek({ ...m, text: msgPreview(m) }); }
+  if (!mine && !m.sys) { bumpUnread(m.conv); notify(m); if (!document.hidden) Club.peek({ ...m, text: msgPreview(m) }); }
   renderConvs();
 }
 
@@ -485,7 +613,8 @@ function notify(m) {
   if (away || mention || (dm && m.conv !== CONV) || !Club.inChat()) ding();
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (!away && !mention) return;
-  const n = new Notification(dm ? `Message privé de ${m.from}` : mention ? `${m.from} t'a mentionné` : m.from, { body: msgPreview(m).slice(0, 160), icon: '/icon.png', tag: 'bahlou' });
+  const grp = m.conv?.startsWith('g:') ? state.groups[m.conv] : null;
+  const n = new Notification(grp ? `${m.from} dans ${grp.name}` : dm ? `Message privé de ${m.from}` : mention ? `${m.from} t'a mentionné` : m.from, { body: msgPreview(m).slice(0, 160), icon: '/icon.png', tag: 'bahlou' });
   n.onclick = () => { window.focus(); n.close(); };
 }
 function updateTitle() {
